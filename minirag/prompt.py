@@ -1,15 +1,31 @@
+# 图谱中字段的分隔符，用于拼接或切分图数据中的多个值
 GRAPH_FIELD_SEP = "<SEP>"
 
+# 存储所有提示词模板的字典
 PROMPTS = {}
 
+# 默认的元组内部分隔符
 PROMPTS["DEFAULT_TUPLE_DELIMITER"] = "<|>"
+# 默认的记录间分隔符
 PROMPTS["DEFAULT_RECORD_DELIMITER"] = "##"
+# 默认的完成标志分隔符
 PROMPTS["DEFAULT_COMPLETION_DELIMITER"] = "<|COMPLETE|>"
+# 用于在命令行显示处理进度的动态旋转图标字符列表
 PROMPTS["process_tickers"] = ["⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"]
 
+# 默认的实体类型列表
 PROMPTS["DEFAULT_ENTITY_TYPES"] = ["organization", "person", "location", "event"]
 
-
+# --- 实体与关系抽取提示词 ---
+# 目标：从给定文本中，根据指定的实体类型列表，识别所有实体及其之间的关系。
+# 步骤:
+# 1. 识别所有实体，并为每个实体提取名称、类型和描述。
+# 2. 识别实体间的明确关系，并为每个关系提取源实体、目标实体、关系描述、关系强度和关系关键词。
+# 3. 识别概括全文主旨的高级关键词。
+# 4. 以指定格式返回所有实体和关系。
+# 5. 完成后输出结束分隔符。
+# 模板中包含详细的示例（Examples）来指导LLM的输出格式，实现少样本学习。
+# 最后部分（Real Data）用于注入实际的实体类型和输入文本。
 PROMPTS["entity_extraction"] = """-Goal-
 Given a text document that is potentially relevant to this activity and a list of entity types, identify all entities of those types from the text and all relationships among the identified entities.
 
@@ -117,7 +133,13 @@ Text: {input_text}
 Output:
 """
 
-
+# --- 实体描述总结提示词 ---
+# 目标：给定一个或多个实体名称和相关描述列表，生成一个全面的、单一的描述。
+# 要求：
+# - 整合所有描述中的信息。
+# - 如果描述有矛盾，需要解决矛盾并给出连贯的总结。
+# - 使用第三人称。
+# - 包含实体名称以提供完整上下文。
 PROMPTS[
     "summarize_entity_descriptions"
 ] = """You are a helpful assistant responsible for generating a comprehensive summary of the data provided below.
@@ -134,12 +156,16 @@ Description List: {description_list}
 Output:
 """
 
+# --- 继续实体抽取提示词 ---
+# 目标：提示LLM在上一轮抽取中遗漏了很多实体，要求它继续抽取并以相同格式添加。
 PROMPTS[
     "entiti_continue_extraction"
 ] = """MANY entities were missed in the last extraction.  Add them below using the same format:
 """
 
-
+# --- (MiniRAG模式) 继续实体抽取提示词 ---
+# 目标：更具体地提示LLM在上一轮抽取中遗漏了哪些信息，并要求它继续添加。
+# - 包含一个 {omit} 占位符，用于填入遗漏信息的总结。
 PROMPTS[
     "entiti_continue_extraction_mini"
 ] = """MANY entities were missed in the last extraction.
@@ -155,7 +181,14 @@ Entity_types: {entity_types}
 Add them below using the same format:
 """
 
-
+# --- (MiniRAG模式) 查询到关键词转换提示词 ---
+# 角色：一个帮助识别用户查询中“答案类型关键词”和“查询实体”的助手。
+# 目标：
+# - "answer_type_keywords": 答案的类型，必须从给定的 "Answer type pool" 中选择。
+# - "entities_from_query": 查询中具体的实体或细节，必须从查询中提取。
+# 要求：
+# - 以JSON格式输出。
+# - 答案类型关键词列表中，可能性最高的类型应排在最前面，最多3个。
 PROMPTS["minirag_query2kwd"] = """---Role---
 
 You are a helpful assistant tasked with identifying both answer-type and low-level keywords in the user's query.
@@ -304,14 +337,24 @@ Output:
 
 """
 
-
+# --- 判断是否继续循环抽取提示词 ---
+# 目标：询问LLM是否仍有遗漏的实体需要添加，要求回答“YES”或“NO”。
 PROMPTS[
     "entiti_if_loop_extraction"
 ] = """It appears some entities may have still been missed.  Answer YES | NO if there are still entities that need to be added.
 """
 
+# --- RAG查询失败时的默认响应 ---
 PROMPTS["fail_response"] = "Sorry, I'm not able to provide an answer to that question."
 
+# --- 标准RAG响应生成提示词 ---
+# 角色：一个根据提供的结构化表格数据回答问题的助手。
+# 目标：
+# - 根据用户问题，生成指定长度和格式（{response_type}）的响应。
+# - 总结输入数据表（{context_data}）中的所有信息。
+# - 结合相关的通用知识。
+# - 如果不知道答案，就直接说不知道，不编造信息。
+# - 不包含没有证据支持的信息。
 PROMPTS["rag_response"] = """---Role---
 
 You are a helpful assistant responding to questions about data in the tables provided.
@@ -334,6 +377,12 @@ Do not include information where the supporting evidence for it is not provided.
 Add sections and commentary to the response as appropriate for the length and format. Style the response in markdown.
 """
 
+# --- 关键词提取提示词 ---
+# 角色：一个帮助识别用户查询中“高级关键词”和“低级关键词”的助手。
+# 目标：
+# - "high_level_keywords": 概括性的概念或主题。
+# - "low_level_keywords": 具体的实体、细节或术语。
+# 要求：以JSON格式输出。
 PROMPTS["keywords_extraction"] = """---Role---
 
 You are a helpful assistant tasked with identifying both high-level and low-level keywords in the user's query.
@@ -390,6 +439,9 @@ Output:
 
 """
 
+# --- 朴素RAG响应生成提示词 ---
+# 角色：一个根据提供的非结构化文档回答问题的助手。
+# 目标：与标准的 "rag_response" 类似，但其上下文（{content_data}）是直接的、未经处理的文档内容，而不是结构化的表格。
 PROMPTS["naive_rag_response"] = """---Role---
 
 You are a helpful assistant responding to questions about documents provided.

@@ -1,3 +1,7 @@
+# 本文件为MiniRAG核心操作模块，包含分块、实体关系抽取、查询等主要流程实现。
+# 主要涉及知识图谱、向量数据库、KV存储等多种数据结构的协同操作。
+# 适用于RAG（Retrieval-Augmented Generation）场景下的本地与全局检索、混合推理等。
+
 import asyncio
 import json
 import re
@@ -7,35 +11,45 @@ import warnings
 import json_repair
 
 from .utils import (
-    list_of_list_to_csv,
-    truncate_list_by_token_size,
-    split_string_by_multi_markers,
-    logger,
-    locate_json_string_body_from_string,
-    process_combine_contexts,
-    clean_str,
-    edge_vote_path,
-    encode_string_by_tiktoken,
-    decode_tokens_by_tiktoken,
-    is_float_regex,
-    pack_user_ass_to_openai_messages,
-    compute_mdhash_id,
-    calculate_similarity,
-    cal_path_score_list,
+    list_of_list_to_csv,  # 列表转CSV字符串
+    truncate_list_by_token_size,  # 按token数截断列表
+    split_string_by_multi_markers,  # 按多种分隔符切分字符串
+    logger,  # 日志工具
+    locate_json_string_body_from_string,  # 从字符串中定位JSON体
+    process_combine_contexts,  # 合并上下文内容
+    clean_str,  # 清洗字符串
+    edge_vote_path,  # 边路径投票
+    encode_string_by_tiktoken,  # tiktoken编码
+    decode_tokens_by_tiktoken,  # tiktoken解码
+    is_float_regex,  # 判断字符串是否为浮点数
+    pack_user_ass_to_openai_messages,  # 打包对话历史
+    compute_mdhash_id,  # 计算哈希ID
+    calculate_similarity,  # 计算相似度
+    cal_path_score_list,  # 路径打分
 )
 from .base import (
-    BaseGraphStorage,
-    BaseKVStorage,
-    BaseVectorStorage,
-    TextChunkSchema,
-    QueryParam,
+    BaseGraphStorage,  # 图存储基类
+    BaseKVStorage,     # KV存储基类
+    BaseVectorStorage, # 向量存储基类
+    TextChunkSchema,   # 文本块结构
+    QueryParam,        # 查询参数结构
 )
-from .prompt import GRAPH_FIELD_SEP, PROMPTS
+from .prompt import GRAPH_FIELD_SEP, PROMPTS  # 分隔符与提示词
 
 
 def chunking_by_token_size(
     content: str, overlap_token_size=128, max_token_size=1024, tiktoken_model="gpt-4o"
 ):
+    """
+    按token数对长文本进行分块，支持重叠窗口。
+    Args:
+        content: 原始文本
+        overlap_token_size: 分块间重叠token数
+        max_token_size: 每块最大token数
+        tiktoken_model: tiktoken模型名
+    Returns:
+        list: 分块结果，每块包含token数、内容、顺序索引
+    """
     tokens = encode_string_by_tiktoken(content, model_name=tiktoken_model)
     results = []
     for index, start in enumerate(
@@ -59,11 +73,14 @@ async def _handle_entity_relation_summary(
     description: str,
     global_config: dict,
 ) -> str:
+    """
+    对实体或关系描述进行摘要（如token数超限时）。
+    """
     tiktoken_model_name = global_config["tiktoken_model_name"]
     summary_max_tokens = global_config["entity_summary_to_max_tokens"]
 
     tokens = encode_string_by_tiktoken(description, model_name=tiktoken_model_name)
-    if len(tokens) < summary_max_tokens:  # No need for summary
+    if len(tokens) < summary_max_tokens:  # 不超限则直接返回
         return description
 
 
@@ -71,9 +88,17 @@ async def _handle_single_entity_extraction(
     record_attributes: list[str],
     chunk_key: str,
 ):
+    """
+    解析单条实体抽取结果，返回标准化实体结构。
+    Args:
+        record_attributes: 属性列表
+        chunk_key: 来源chunk的key
+    Returns:
+        dict或None: 标准化实体信息
+    """
     if len(record_attributes) < 4 or record_attributes[0] != '"entity"':
         return None
-    # add this record as a node in the G
+    # 组装实体节点
     entity_name = clean_str(record_attributes[1].upper())
     if not entity_name.strip():
         return None
@@ -92,9 +117,17 @@ async def _handle_single_relationship_extraction(
     record_attributes: list[str],
     chunk_key: str,
 ):
+    """
+    解析单条关系抽取结果，返回标准化关系结构。
+    Args:
+        record_attributes: 属性列表
+        chunk_key: 来源chunk的key
+    Returns:
+        dict或None: 标准化关系信息
+    """
     if len(record_attributes) < 5 or record_attributes[0] != '"relationship"':
         return None
-    # add this record as edge
+    # 组装边信息
     source = clean_str(record_attributes[1].upper())
     target = clean_str(record_attributes[2].upper())
     edge_description = clean_str(record_attributes[3])
@@ -120,6 +153,9 @@ async def _merge_nodes_then_upsert(
     knowledge_graph_inst: BaseGraphStorage,
     global_config: dict,
 ):
+    """
+    合并同名实体节点属性并写入图存储。
+    """
     already_entitiy_types = []
     already_source_ids = []
     already_description = []
@@ -132,6 +168,7 @@ async def _merge_nodes_then_upsert(
         )
         already_description.append(already_node["description"])
 
+    # 统计出现最多的实体类型
     entity_type = sorted(
         Counter(
             [dp["entity_type"] for dp in nodes_data] + already_entitiy_types
@@ -140,6 +177,7 @@ async def _merge_nodes_then_upsert(
         reverse=True,
     )[0][0]
 
+    # 合并描述和来源ID
     description = GRAPH_FIELD_SEP.join(
         sorted(set([dp["description"] for dp in nodes_data] + already_description))
     )
@@ -170,6 +208,9 @@ async def _merge_edges_then_upsert(
     knowledge_graph_inst: BaseGraphStorage,
     global_config: dict,
 ):
+    """
+    合并同一对节点间的边属性并写入图存储。
+    """
     already_weights = []
     already_source_ids = []
     already_description = []
@@ -238,6 +279,18 @@ async def extract_entities(
     relationships_vdb: BaseVectorStorage,
     global_config: dict,
 ) -> Union[BaseGraphStorage, None]:
+    """
+    从文本块中提取实体和关系，并写入知识图谱和向量数据库。
+    Args:
+        chunks: 文本块字典
+        knowledge_graph_inst: 知识图谱实例
+        entity_vdb: 实体向量数据库
+        entity_name_vdb: 实体名称向量数据库
+        relationships_vdb: 关系向量数据库
+        global_config: 全局配置
+    Returns:
+        BaseGraphStorage或None: 更新后的知识图谱实例
+    """
     use_llm_func: callable = global_config["llm_model_func"]
     entity_extract_max_gleaning = global_config["entity_extract_max_gleaning"]
 
@@ -263,6 +316,13 @@ async def extract_entities(
     already_relations = 0
 
     async def _process_single_content(chunk_key_dp: tuple[str, TextChunkSchema]):
+        """
+        异步处理单个文本块，调用LLM进行实体和关系抽取。
+        Args:
+            chunk_key_dp: chunk的key和内容
+        Returns:
+            tuple: 抽取到的实体字典和关系字典
+        """
         nonlocal already_processed, already_entities, already_relations
         chunk_key = chunk_key_dp[0]
         chunk_dp = chunk_key_dp[1]
@@ -417,6 +477,19 @@ async def local_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    """
+    本地查询流程，包括关键词提取、实体和关系检索、文本块检索。
+    Args:
+        query: 查询文本
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        relationships_vdb: 关系向量数据库
+        text_chunks_db: 文本块KV存储
+        query_param: 查询参数
+        global_config: 全局配置
+    Returns:
+        str: LLM响应
+    """
     context = None
     use_model_func = global_config["llm_model_func"]
 
@@ -487,6 +560,17 @@ async def _build_local_query_context(
     text_chunks_db: BaseKVStorage[TextChunkSchema],
     query_param: QueryParam,
 ):
+    """
+    构建本地查询的上下文，包括实体、关系和文本块。
+    Args:
+        query: 查询关键词
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        text_chunks_db: 文本块KV存储
+        query_param: 查询参数
+    Returns:
+        str: 上下文字符串
+    """
     results = await entities_vdb.query(query, top_k=query_param.top_k)
 
     if not len(results):
@@ -569,6 +653,16 @@ async def _find_most_related_text_unit_from_entities(
     text_chunks_db: BaseKVStorage[TextChunkSchema],
     knowledge_graph_inst: BaseGraphStorage,
 ):
+    """
+    从实体中查找最相关的文本块。
+    Args:
+        node_datas: 实体数据列表
+        query_param: 查询参数
+        text_chunks_db: 文本块KV存储
+        knowledge_graph_inst: 知识图谱实例
+    Returns:
+        list: 最相关的文本块列表
+    """
     text_units = [
         split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
         for dp in node_datas
@@ -646,6 +740,15 @@ async def _find_most_related_edges_from_entities(
     query_param: QueryParam,
     knowledge_graph_inst: BaseGraphStorage,
 ):
+    """
+    从实体中查找最相关的边。
+    Args:
+        node_datas: 实体数据列表
+        query_param: 查询参数
+        knowledge_graph_inst: 知识图谱实例
+    Returns:
+        list: 最相关的边列表
+    """
     all_related_edges = await asyncio.gather(
         *[knowledge_graph_inst.get_node_edges(dp["entity_name"]) for dp in node_datas]
     )
@@ -684,6 +787,19 @@ async def global_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    """
+    全局查询流程，包括关键词提取、实体和关系检索、文本块检索。
+    Args:
+        query: 查询文本
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        relationships_vdb: 关系向量数据库
+        text_chunks_db: 文本块KV存储
+        query_param: 查询参数
+        global_config: 全局配置
+    Returns:
+        str: LLM响应
+    """
     context = None
     use_model_func = global_config["llm_model_func"]
 
@@ -759,6 +875,18 @@ async def _build_global_query_context(
     text_chunks_db: BaseKVStorage[TextChunkSchema],
     query_param: QueryParam,
 ):
+    """
+    构建全局查询的上下文，包括实体、关系和文本块。
+    Args:
+        keywords: 查询关键词
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        relationships_vdb: 关系向量数据库
+        text_chunks_db: 文本块KV存储
+        query_param: 查询参数
+    Returns:
+        str: 上下文字符串
+    """
     results = await relationships_vdb.query(keywords, top_k=query_param.top_k)
 
     if not len(results):
@@ -852,6 +980,15 @@ async def _find_most_related_entities_from_relationships(
     query_param: QueryParam,
     knowledge_graph_inst: BaseGraphStorage,
 ):
+    """
+    从关系中查找最相关的实体。
+    Args:
+        edge_datas: 关系数据列表
+        query_param: 查询参数
+        knowledge_graph_inst: 知识图谱实例
+    Returns:
+        list: 最相关的实体列表
+    """
     entity_names = set()
     for e in edge_datas:
         entity_names.add(e["src_id"])
@@ -884,6 +1021,16 @@ async def _find_related_text_unit_from_relationships(
     text_chunks_db: BaseKVStorage[TextChunkSchema],
     knowledge_graph_inst: BaseGraphStorage,
 ):
+    """
+    从关系中查找相关的文本块。
+    Args:
+        edge_datas: 关系数据列表
+        query_param: 查询参数
+        text_chunks_db: 文本块KV存储
+        knowledge_graph_inst: 知识图谱实例
+    Returns:
+        list: 相关的文本块列表
+    """
     text_units = [
         split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
         for dp in edge_datas
@@ -924,6 +1071,19 @@ async def hybrid_query(
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    """
+    混合查询流程，结合低级和高级查询结果。
+    Args:
+        query: 查询文本
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        relationships_vdb: 关系向量数据库
+        text_chunks_db: 文本块KV存储
+        query_param: 查询参数
+        global_config: 全局配置
+    Returns:
+        str: LLM响应
+    """
     low_level_context = None
     high_level_context = None
     use_model_func = global_config["llm_model_func"]
@@ -1005,9 +1165,23 @@ async def hybrid_query(
 
 
 def combine_contexts(high_level_context, low_level_context):
-    # Function to extract entities, relationships, and sources from context strings
+    """
+    合并高级别和低级别查询的上下文。
+    Args:
+        high_level_context: 高级别查询的上下文
+        low_level_context: 低级别查询的上下文
+    Returns:
+        str: 合并后的上下文字符串
+    """
 
     def extract_sections(context):
+        """
+        从上下文字符串中提取实体、关系和来源部分。
+        Args:
+            context: 上下文字符串
+        Returns:
+            tuple: 实体、关系、来源字符串
+        """
         entities_match = re.search(
             r"-----Entities-----\s*```csv\s*(.*?)\s*```", context, re.DOTALL
         )
@@ -1080,6 +1254,17 @@ async def naive_query(
     query_param: QueryParam,
     global_config: dict,
 ):
+    """
+    简单查询流程，直接从向量数据库检索文本块。
+    Args:
+        query: 查询文本
+        chunks_vdb: 文本块向量数据库
+        text_chunks_db: 文本块KV存储
+        query_param: 查询参数
+        global_config: 全局配置
+    Returns:
+        str: LLM响应
+    """
     use_model_func = global_config["llm_model_func"]
     results = await chunks_vdb.query(query, top_k=query_param.top_k)
     if not len(results):
@@ -1124,6 +1309,17 @@ async def naive_query(
 async def path2chunk(
     scored_edged_reasoning_path, knowledge_graph_inst, pairs_append, query, max_chunks=5
 ):
+    """
+    根据路径得分和投票结果，将文本块聚合为最终答案。
+    Args:
+        scored_edged_reasoning_path: 带分数的路径字典
+        knowledge_graph_inst: 知识图谱实例
+        pairs_append: 边路径投票结果
+        query: 查询文本
+        max_chunks: 最大文本块数量
+    Returns:
+        dict: 更新后的带分数的路径字典
+    """
     already_node = {}
     for k, v in scored_edged_reasoning_path.items():
         node_chunk_id = None
@@ -1210,6 +1406,12 @@ async def path2chunk(
 
 
 def scorednode2chunk(input_dict, values_dict):
+    """
+    将实体和关系数据映射到文本块ID。
+    Args:
+        input_dict: 实体或关系字典
+        values_dict: 文本块ID到文本块数据的映射
+    """
     for key, value_list in input_dict.items():
         input_dict[key] = [
             values_dict.get(val, None) for val in value_list if val in values_dict
@@ -1218,6 +1420,15 @@ def scorednode2chunk(input_dict, values_dict):
 
 
 def kwd2chunk(ent_from_query_dict, chunks_ids, chunk_nums):
+    """
+    根据实体和关系查询结果，聚合文本块ID。
+    Args:
+        ent_from_query_dict: 实体查询结果字典
+        chunks_ids: 文本块ID列表
+        chunk_nums: 聚合后的文本块数量
+    Returns:
+        list: 聚合后的文本块ID列表
+    """
     final_chunk = Counter()
     final_chunk_id = []
     for key, list_of_dicts in ent_from_query_dict.items():
@@ -1262,6 +1473,23 @@ async def _build_mini_query_context(
     embedder,
     query_param: QueryParam,
 ):
+    """
+    构建MiniRAG查询的上下文，包括实体、关系和文本块检索。
+    Args:
+        ent_from_query: 实体查询结果
+        type_keywords: 类型关键词
+        originalquery: 原始查询文本
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        entity_name_vdb: 实体名称向量数据库
+        relationships_vdb: 关系向量数据库
+        chunks_vdb: 文本块向量数据库
+        text_chunks_db: 文本块KV存储
+        embedder: 嵌入模型
+        query_param: 查询参数
+    Returns:
+        str: 上下文字符串
+    """
     imp_ents = []
     nodes_from_query_list = []
     ent_from_query_dict = {}
@@ -1418,6 +1646,22 @@ async def minirag_query(  # MiniRAG
     query_param: QueryParam,
     global_config: dict,
 ) -> str:
+    """
+    MiniRAG主查询流程，调用MiniRAG专用提示词和模型。
+    Args:
+        query: 查询文本
+        knowledge_graph_inst: 知识图谱实例
+        entities_vdb: 实体向量数据库
+        entity_name_vdb: 实体名称向量数据库
+        relationships_vdb: 关系向量数据库
+        chunks_vdb: 文本块向量数据库
+        text_chunks_db: 文本块KV存储
+        embedder: 嵌入模型
+        query_param: 查询参数
+        global_config: 全局配置
+    Returns:
+        str: LLM响应
+    """
     use_model_func = global_config["llm_model_func"]
     kw_prompt_temp = PROMPTS["minirag_query2kwd"]
     TYPE_POOL, TYPE_POOL_w_CASE = await knowledge_graph_inst.get_types()
