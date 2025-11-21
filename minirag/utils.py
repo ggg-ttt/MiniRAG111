@@ -486,27 +486,52 @@ def cal_path_score_list(candidate_reasoning_path, maybe_answer_list):
 def edge_vote_path(path_dict, edge_list):
     """
     使用给定的边列表（edge_list）对路径进行投票，从而调整路径分数。
+    通过计算与查询相关的边在路径中的出现次数来增强相关路径的权重。
+    
+    Args:
+        path_dict: 路径字典，键为实体名称，值为包含路径信息和分数的字典
+        edge_list: 边列表，包含查询相关的边信息
+    
+    Returns:
+        tuple: (更新后的路径字典, 路径-边对应字典)
+            - 更新后的路径字典：包含每条路径的新增投票分数
+            - 路径-边对应字典：记录每条路径中包含的所有查询相关边
     """
+    # 创建路径字典的深拷贝，避免修改原数据
     return_dict = copy.deepcopy(path_dict)
+    # 初始化边列表，用于存储边的源节点和目标节点对
     EDGELIST = []
+    # 初始化路径-边对应字典，用于记录每条路径包含的查询相关边
     pairs_append = {}
+    
+    # 遍历输入边列表，提取每条边的源节点和目标节点，构建边元组列表
     for i in edge_list:
         EDGELIST.append((i["src_id"], i["tgt_id"]))
     
+    # 遍历每条路径对应的信息
     for i in return_dict.values():
+        # 遍历路径元组和对应的分数列表
         for path_tuple, path_scores in i["Path"].items():
+            # 确保路径有分数信息
             if path_scores:
+                # 初始化投票计数
                 count = 0
+                # 遍历所有查询相关的边
                 for pairs in EDGELIST:
-                    # 如果给定的边是路径的一部分，则投票数加一
+                    # 检查当前边是否是路径中的连续子序列
                     if is_continuous_subsequence(pairs, path_tuple):
+                        # 如果边是路径的一部分，投票数加1
                         count += 1
+                        # 记录该边与路径的对应关系
                         if path_tuple not in pairs_append:
+                            # 如果是首次出现该路径，创建新条目
                             pairs_append[path_tuple] = [pairs]
                         else:
+                            # 否则追加到已有条目
                             pairs_append[path_tuple].append(pairs)
-                # 将投票数作为新的分数追加
+                # 将投票数作为新的分数添加到路径分数列表末尾
                 path_scores.append(count)
+    # 返回更新后的路径字典和路径-边对应关系字典
     return return_dict, pairs_append
 
 

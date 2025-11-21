@@ -2630,9 +2630,9 @@ async def hybrid_query(
     global_config: dict,
 ) -> str:
     """
-    混合查询流程，结合低级和高级查询结果。
+    lightRAG的混合查询流程，结合低级和高级查询结果。
     
-    混合查询是MiniRAG的核心特性之一，通过分离高级和低级关键词，
+    混合查询是lightRAG的核心特性之一，通过分离高级和低级关键词，
     同时执行全局查询和本地查询，然后智能合并结果，提供更全面的回答。
     
     Args:
@@ -3210,17 +3210,17 @@ def kwd2chunk(ent_from_query_dict, chunks_ids, chunk_nums):
 
 
 async def _build_mini_query_context(
-    ent_from_query,
-    type_keywords,
-    originalquery,
-    knowledge_graph_inst: BaseGraphStorage,
-    entities_vdb: BaseVectorStorage,
-    entity_name_vdb: BaseVectorStorage,
-    relationships_vdb: BaseVectorStorage,
-    chunks_vdb: BaseVectorStorage,
-    text_chunks_db: BaseKVStorage[TextChunkSchema],
-    embedder,
-    query_param: QueryParam,
+    ent_from_query,  # 从查询中识别的实体列表
+    type_keywords,  # 查询中识别的类型关键词
+    originalquery,  # 原始查询文本
+    knowledge_graph_inst: BaseGraphStorage,  # 知识图谱实例
+    entities_vdb: BaseVectorStorage,  # 实体向量数据库
+    entity_name_vdb: BaseVectorStorage,  # 实体名称向量数据库
+    relationships_vdb: BaseVectorStorage,  # 关系向量数据库
+    chunks_vdb: BaseVectorStorage,  # 文本块向量数据库
+    text_chunks_db: BaseKVStorage[TextChunkSchema],  # 文本块KV存储
+    embedder,  # 嵌入模型
+    query_param: QueryParam,  # 查询参数配置
 ):
     """
     构建MiniRAG查询的上下文，包括实体、关系和文本块检索。
@@ -3239,138 +3239,198 @@ async def _build_mini_query_context(
     Returns:
         str: 上下文字符串
     """
+    # 初始化重要实体列表，用于存储后续处理中的关键实体
     imp_ents = []
+    # 初始化查询节点列表，存储从实体名称向量数据库查询的结果
     nodes_from_query_list = []
+    # 初始化实体查询结果字典，键为原始实体，值为对应的匹配实体列表
     ent_from_query_dict = {}
 
+    # 遍历查询中识别的每个实体
     for ent in ent_from_query:
+        # 初始化实体对应的匹配结果列表
         ent_from_query_dict[ent] = []
+        # 在实体名称向量数据库中查询匹配的实体
         results_node = await entity_name_vdb.query(ent, top_k=query_param.top_k)
 
+        # 将查询结果添加到节点列表中
         nodes_from_query_list.append(results_node)
+        # 提取实体名称并保存到字典中
         ent_from_query_dict[ent] = [e["entity_name"] for e in results_node]
 
+    # 初始化候选推理路径字典
     candidate_reasoning_path = {}
 
+    # 遍历每个实体的查询结果列表
     for results_node_list in nodes_from_query_list:
+        # 创建新的候选推理路径字典，键为实体名称，值为包含分数和路径的字典
         candidate_reasoning_path_new = {
             key["entity_name"]: {"Score": key["distance"], "Path": []}
             for key in results_node_list
         }
 
+        # 合并新路径到候选推理路径字典
         candidate_reasoning_path = {
             **candidate_reasoning_path,
             **candidate_reasoning_path_new,
         }
+    
+    # 为每个候选实体查找k跳邻居路径
     for key in candidate_reasoning_path.keys():
+        # 获取实体的2跳邻居路径信息
         candidate_reasoning_path[key][
             "Path"
         ] = await knowledge_graph_inst.get_neighbors_within_k_hops(key, 2)
+        # 将实体添加到重要实体列表
         imp_ents.append(key)
 
+    # 过滤出路径长度小于1的短路径条目（没有邻居节点的实体）
     short_path_entries = {
         name: entry
         for name, entry in candidate_reasoning_path.items()
         if len(entry["Path"]) < 1
     }
+    # 按分数降序排序短路径条目
     sorted_short_path_entries = sorted(
         short_path_entries.items(), key=lambda x: x[1]["Score"], reverse=True
     )
+    # 计算要保留的短路径数量，至少保留1个，最多保留20%
     save_p = max(1, int(len(sorted_short_path_entries) * 0.2))
+    # 获取分数最高的短路径条目
     top_short_path_entries = sorted_short_path_entries[:save_p]
+    # 转换为字典格式
     top_short_path_dict = {name: entry for name, entry in top_short_path_entries}
+    
+    # 过滤出路径长度大于等于1的长路径条目
     long_path_entries = {
         name: entry
         for name, entry in candidate_reasoning_path.items()
         if len(entry["Path"]) >= 1
     }
+    # 合并长路径和高分短路径，形成新的候选推理路径
     candidate_reasoning_path = {**long_path_entries, **top_short_path_dict}
+    
+    # 根据类型关键词获取相关节点
     node_datas_from_type = await knowledge_graph_inst.get_node_from_types(
         type_keywords
     )  # entity_type, description,...
 
+    # 提取类型相关实体的名称
     maybe_answer_list = [n["entity_name"] for n in node_datas_from_type]
+    # 将类型相关实体添加到重要实体列表
     imp_ents = imp_ents + maybe_answer_list
+    # 计算推理路径的分数
     scored_reasoning_path = cal_path_score_list(
         candidate_reasoning_path, maybe_answer_list
     )
 
+    # 在关系向量数据库中查询与原始查询相关的关系
     results_edge = await relationships_vdb.query(
         originalquery, top_k=len(ent_from_query) * query_param.top_k
     )
+    # 初始化好边和坏边列表
     goodedge = []
     badedge = []
+    # 过滤关系，区分与重要实体相关的边和不相关的边
     for item in results_edge:
         if item["src_id"] in imp_ents or item["tgt_id"] in imp_ents:
-            goodedge.append(item)
+            goodedge.append(item)  # 至少有一个端点是重要实体的边为好边
         else:
-            badedge.append(item)
+            badedge.append(item)  # 两个端点都不是重要实体的边为坏边
+    
+    # 使用边投票机制对推理路径进行优化，获取更新后的路径和新增的实体对
     scored_edged_reasoning_path, pairs_append = edge_vote_path(
         scored_reasoning_path, goodedge
     )
+    
+    # 将推理路径转换为相关文本块，添加更多上下文信息
     scored_edged_reasoning_path = await path2chunk(
-        scored_edged_reasoning_path,
-        knowledge_graph_inst,
-        pairs_append,
-        originalquery,
-        max_chunks=3,
+        scored_edged_reasoning_path,  # 优化后的推理路径
+        knowledge_graph_inst,  # 知识图谱实例
+        pairs_append,  # 新增的实体对
+        originalquery,  # 原始查询
+        max_chunks=3,  # 每个路径最多关联3个文本块
     )
 
+    # 初始化实体部分列表，用于构建最终的实体上下文
     entites_section_list = []
+    # 并发获取所有实体的详细信息
     node_datas = await asyncio.gather(
         *[
             knowledge_graph_inst.get_node(entity_name)
             for entity_name in scored_edged_reasoning_path.keys()
         ]
     )
+    # 合并实体信息和分数，构建完整的实体数据
     node_datas = [
         {**n, "entity_name": k, "Score": scored_edged_reasoning_path[k]["Score"]}
         for k, n in zip(scored_edged_reasoning_path.keys(), node_datas)
     ]
+    
+    # 构建实体部分列表，每个实体包含名称、分数和描述
     for i, n in enumerate(node_datas):
         entites_section_list.append(
             [
-                n["entity_name"],
-                n["Score"],
-                n.get("description", "UNKNOWN"),
+                n["entity_name"],  # 实体名称
+                n["Score"],  # 实体分数
+                n.get("description", "UNKNOWN"),  # 实体描述，默认为UNKNOWN
             ]
         )
+    
+    # 按分数降序排序实体列表
     entites_section_list = sorted(
         entites_section_list, key=lambda x: x[1], reverse=True
     )
+    
+    # 根据token数量限制截断实体列表，避免上下文过长
     entites_section_list = truncate_list_by_token_size(
         entites_section_list,
-        key=lambda x: x[2],
+        key=lambda x: x[2],  # 使用描述文本计算token数
         max_token_size=query_param.max_token_for_node_context,
     )
 
+    # 添加CSV表头
     entites_section_list.insert(0, ["entity", "score", "description"])
+    # 转换实体列表为CSV格式字符串
     entities_context = list_of_list_to_csv(entites_section_list)
 
+    # 将实体与文本块关联
     scorednode2chunk(ent_from_query_dict, scored_edged_reasoning_path)
 
+    # 在文本块向量数据库中查询与原始查询相关的文本块
     results = await chunks_vdb.query(originalquery, top_k=int(query_param.top_k / 2))
+    # 提取文本块ID列表
     chunks_ids = [r["id"] for r in results]
+    # 根据关键词选择最相关的文本块
     final_chunk_id = kwd2chunk(
-        ent_from_query_dict, chunks_ids, chunk_nums=int(query_param.top_k / 2)
+        ent_from_query_dict,  # 实体查询结果字典
+        chunks_ids,  # 候选文本块ID列表
+        chunk_nums=int(query_param.top_k / 2)  # 最终返回的文本块数量
     )
 
+    # 检查是否有查询结果，如果没有节点或边结果，返回None
     if not len(results_node):
         return None
 
     if not len(results_edge):
         return None
 
+    # 并发获取所有选中文本块的详细信息
     use_text_units = await asyncio.gather(
         *[text_chunks_db.get_by_id(id) for id in final_chunk_id]
     )
+    # 初始化文本块部分列表，添加表头
     text_units_section_list = [["id", "content"]]
 
+    # 构建文本块部分列表
     for i, t in enumerate(use_text_units):
-        if t is not None:
-            text_units_section_list.append([i, t["content"]])
+        if t is not None:  # 只添加有效的文本块
+            text_units_section_list.append([i, t["content"]])  # 添加ID和内容
+    
+    # 转换文本块列表为CSV格式字符串
     text_units_context = list_of_list_to_csv(text_units_section_list)
 
+    # 构建并返回最终的上下文字符串，包含实体和文本块两部分
     return f"""
 -----Entities-----
 ```csv
@@ -3384,16 +3444,16 @@ async def _build_mini_query_context(
 
 
 async def minirag_query(  # MiniRAG
-    query,
-    knowledge_graph_inst: BaseGraphStorage,
-    entities_vdb: BaseVectorStorage,
-    entity_name_vdb: BaseVectorStorage,
-    relationships_vdb: BaseVectorStorage,
-    chunks_vdb: BaseVectorStorage,
-    text_chunks_db: BaseKVStorage[TextChunkSchema],
-    embedder,
-    query_param: QueryParam,
-    global_config: dict,
+    query,  # 用户提出的自然语言问题文本
+    knowledge_graph_inst: BaseGraphStorage,  # 知识图谱实例，提供图结构存储和查询能力
+    entities_vdb: BaseVectorStorage,  # 实体向量数据库，存储实体内容的嵌入向量
+    entity_name_vdb: BaseVectorStorage,  # 实体名称向量数据库，专门存储实体名称的嵌入向量
+    relationships_vdb: BaseVectorStorage,  # 关系向量数据库，存储关系描述的嵌入向量
+    chunks_vdb: BaseVectorStorage,  # 文本块向量数据库，存储文本块的嵌入向量
+    text_chunks_db: BaseKVStorage[TextChunkSchema],  # 文本块KV存储，提供原始文本内容的快速访问
+    embedder,  # 嵌入模型，用于文本向量化和相似度计算
+    query_param: QueryParam,  # 查询参数配置，控制检索深度、响应格式等
+    global_config: dict,  # 全局配置，包含LLM模型函数等系统设置
 ) -> str:
     """
     MiniRAG主查询流程，调用MiniRAG专用提示词和模型。
@@ -3433,62 +3493,83 @@ async def minirag_query(  # MiniRAG
         - 边投票：通过投票机制筛选高质量关系连接，提升推理准确性
         - 层次查询：结合名称检索和内容检索，提供多维度的实体发现能力
     """
+    # 从全局配置中获取LLM模型调用函数
     use_model_func = global_config["llm_model_func"]
+    # 获取MiniRAG专用的关键词提取提示词模板
     kw_prompt_temp = PROMPTS["minirag_query2kwd"]
+    # 从知识图谱实例中获取所有实体类型（用于类型关键词提取）
     TYPE_POOL, TYPE_POOL_w_CASE = await knowledge_graph_inst.get_types()
+    # 将查询文本和类型池格式化到提示词模板中
     kw_prompt = kw_prompt_temp.format(query=query, TYPE_POOL=TYPE_POOL)
+    # 调用LLM模型执行关键词提取
     result = await use_model_func(kw_prompt)
 
+    # 尝试解析LLM返回的JSON格式结果
     try:
+        # 使用json_repair库处理可能有格式问题的JSON
         keywords_data = json_repair.loads(result)
-
+        
+        # 提取回答类型关键词列表
         type_keywords = keywords_data.get("answer_type_keywords", [])
+        # 提取从查询中识别的实体列表，最多取前5个
         entities_from_query = keywords_data.get("entities_from_query", [])[:5]
 
     except json.JSONDecodeError:
+        # 首次解析失败，尝试清理和重新格式化结果
         try:
+            # 清理结果文本，移除提示词和可能的用户/模型标识
             result = (
-                result.replace(kw_prompt[:-1], "")
-                .replace("user", "")
-                .replace("model", "")
-                .strip()
+                result.replace(kw_prompt[:-1], "")  # 移除提示词部分
+                .replace("user", "")  # 移除"user"字符串
+                .replace("model", "")  # 移除"model"字符串
+                .strip()  # 去除首尾空白字符
             )
+            # 尝试提取结果中的JSON对象部分并重新包装
             result = "{" + result.split("{")[1].split("}")[0] + "}"
+            # 再次尝试解析处理后的JSON
             keywords_data = json_repair.loads(result)
             type_keywords = keywords_data.get("answer_type_keywords", [])
             entities_from_query = keywords_data.get("entities_from_query", [])[:5]
 
-        # Handle parsing error
+        # 处理解析错误，提供故障响应
         except Exception as e:
-            print(f"JSON parsing error: {e}")
-            return PROMPTS["fail_response"]
+            print(f"JSON parsing error: {e}")  # 记录错误信息到控制台
+            return PROMPTS["fail_response"]  # 返回预定义的失败响应
 
+    # 构建查询上下文，这是MiniRAG的核心处理步骤
     context = await _build_mini_query_context(
-        entities_from_query,
-        type_keywords,
-        query,
-        knowledge_graph_inst,
-        entities_vdb,
-        entity_name_vdb,
-        relationships_vdb,
-        chunks_vdb,
-        text_chunks_db,
-        embedder,
-        query_param,
+        entities_from_query,  # 从查询中识别的实体
+        type_keywords,  # 识别的类型关键词
+        query,  # 原始查询
+        knowledge_graph_inst,  # 知识图谱实例
+        entities_vdb,  # 实体向量数据库
+        entity_name_vdb,  # 实体名称向量数据库
+        relationships_vdb,  # 关系向量数据库
+        chunks_vdb,  # 文本块向量数据库
+        text_chunks_db,  # 文本块KV存储
+        embedder,  # 嵌入模型
+        query_param,  # 查询参数
     )
 
+    # 如果只需要上下文而不需要生成回答
     if query_param.only_need_context:
-        return context
+        return context  # 直接返回构建的上下文
+    # 如果上下文为空
     if context is None:
-        return PROMPTS["fail_response"]
+        return PROMPTS["fail_response"]  # 返回预定义的失败响应
 
+    # 获取RAG响应提示词模板
     sys_prompt_temp = PROMPTS["rag_response"]
+    # 格式化系统提示词，填入上下文和响应类型
     sys_prompt = sys_prompt_temp.format(
-        context_data=context, response_type=query_param.response_type
+        context_data=context,  # 构建的查询上下文
+        response_type=query_param.response_type  # 期望的响应类型
     )
+    # 调用LLM模型生成最终回答，使用原始查询作为用户提示，上下文作为系统提示
     response = await use_model_func(
-        query,
-        system_prompt=sys_prompt,
+        query,  # 用户原始查询
+        system_prompt=sys_prompt,  # 包含上下文的系统提示
     )
 
+    # 返回生成的最终回答
     return response

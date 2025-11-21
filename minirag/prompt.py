@@ -183,12 +183,14 @@ Add them below using the same format:
 
 # --- (MiniRAG模式) 查询到关键词转换提示词 ---
 # 角色：一个帮助识别用户查询中“答案类型关键词”和“查询实体”的助手。
-# 目标：
-# - "answer_type_keywords": 答案的类型，必须从给定的 "Answer type pool" 中选择。
-# - "entities_from_query": 查询中具体的实体或细节，必须从查询中提取。
-# 要求：
-# - 以JSON格式输出。
-# - 答案类型关键词列表中，可能性最高的类型应排在最前面，最多3个。
+# -- 目标 ---根据用户查询，列出答案类型关键词和底层关键词：
+# 答案类型关键词（answer_type_keywords）聚焦于该查询所需答案的类型；
+# 底层关键词（low-level keywords）聚焦于具体实体、细节或具体术语。
+# 答案类型关键词必须从「答案类型词库」中选取。该词库以字典形式呈现，其中键（key）为你需选择的类型，值（value）为对应的示例。
+# --- 规则 ---
+# 输出格式为 JSON，包含三个键：
+# "answer_type_keywords"：存储答案类型，按可能性从高到低排序，最多不超过 3 个；
+# "entities_from_query"：存储从查询中提取的具体实体或细节；
 PROMPTS["minirag_query2kwd"] = """---Role---
 
 You are a helpful assistant tasked with identifying both answer-type and low-level keywords in the user's query.
