@@ -2984,88 +2984,137 @@ async def path2chunk(
         - 相关度筛选：基于查询内容进行节点描述的相似度计算
         - 投票优化：利用边投票机制过滤低质量连接，提升精度
     """
+    # 初始化已处理节点字典，用于缓存已处理过的节点文本块信息，避免重复计算
     already_node = {}
+    
+    # 遍历带分数的路径字典中的每个实体及其路径信息
     for k, v in scored_edged_reasoning_path.items():
+        # 初始化当前实体的文本块计数字典为None
         node_chunk_id = None
 
+        # 遍历当前实体的每个路径元组及其得分列表
         for pathtuple, scorelist in v["Path"].items():
+            # 检查当前路径元组是否在投票结果中
             if pathtuple in pairs_append:
+                # 获取投票后的边列表
                 use_edge = pairs_append[pathtuple]
                 edge_datas = []
+                # 并发获取每条边的数据
                 edge_datas = await asyncio.gather(
                     *[knowledge_graph_inst.get_edge(r[0], r[1]) for r in use_edge]
                 )
+                # 从边数据中提取文本块ID，使用分隔符分割source_id
                 text_units = [
                     split_string_by_multi_markers(dp["source_id"], [GRAPH_FIELD_SEP])
                     for dp in edge_datas  # chunk ID
-                ][0]
-
+                ][0]  # 取第一个边的数据作为文本单元
             else:
+                # 如果路径未经过投票，初始化空的边和文本单元列表
                 use_edge = []
                 text_units = []
 
+            # 并发获取路径第一个节点的数据
             node_datas = await asyncio.gather(
                 *[knowledge_graph_inst.get_node(pathtuple[0])]
             )
+            # 处理第一个节点的文本块ID
             for dp in node_datas:
+                # 从节点的source_id中提取文本块ID
                 text_units_node = split_string_by_multi_markers(
                     dp["source_id"], [GRAPH_FIELD_SEP]
                 )
+                # 将节点文本块ID添加到总体文本单元列表
                 text_units = text_units + text_units_node
 
+            # 并发获取路径中剩余所有节点的数据
             node_datas = await asyncio.gather(
                 *[knowledge_graph_inst.get_node(ents) for ents in pathtuple[1:]]
             )
+            # 当查询不为空时，基于查询相关性进行文本块筛选
             if query is not None:
                 for dp in node_datas:
+                    # 提取节点的文本块ID
                     text_units_node = split_string_by_multi_markers(
                         dp["source_id"], [GRAPH_FIELD_SEP]
                     )
+                    # 提取节点的描述信息
                     descriptionlist_node = split_string_by_multi_markers(
                         dp["description"], [GRAPH_FIELD_SEP]
                     )
+                    
+                    # 检查节点描述是否已处理过，避免重复计算
                     if descriptionlist_node[0] not in already_node.keys():
+                        # 标记当前节点已处理
                         already_node[descriptionlist_node[0]] = None
 
+                        # 当文本块ID数量与描述数量匹配时进行相似度筛选
                         if len(text_units_node) == len(descriptionlist_node):
+                            # 当文本块数量超过5个时进行智能筛选
                             if len(text_units_node) > 5:
+                                # 计算需要考虑的最大ID数量，至少5个或总数量的一半
                                 max_ids = int(max(5, len(text_units_node) / 2))
+                                # 计算描述与查询的相似度，选择最相关的前max_ids个描述
                                 should_consider_idx = calculate_similarity(
                                     descriptionlist_node, query, k=max_ids
                                 )
+                                # 根据相似度结果筛选文本块ID
                                 text_units_node = [
                                     text_units_node[i] for i in should_consider_idx
                                 ]
+                                # 缓存筛选后的文本块ID
                                 already_node[descriptionlist_node[0]] = text_units_node
                     else:
+                        # 如果节点已处理，直接使用缓存的文本块ID
                         text_units_node = already_node[descriptionlist_node[0]]
+                    
+                    # 将节点文本块ID添加到总体文本单元列表
                     if text_units_node is not None:
                         text_units = text_units + text_units_node
 
+            # 统计当前路径中各文本块ID的出现频次
             count_dict = Counter(text_units)
+            # 计算当前路径的总得分（路径得分+节点得分+1，+1避免得分为0）
             total_score = scorelist[0] + scorelist[1] + 1
+            # 将每个文本块ID的频次乘以路径总得分，实现权重传递
             for key, value in count_dict.items():
                 count_dict[key] = value * total_score
+            
+            # 合并当前路径的文本块计数到节点总体计数
             if node_chunk_id is None:
+                # 如果是第一个路径，直接赋值
                 node_chunk_id = count_dict
             else:
+                # 否则累加计数
                 node_chunk_id = node_chunk_id + count_dict
+        
+        # 清空原路径数据，准备存储文本块ID列表
         v["Path"] = []
+        
+        # 如果没有成功获取任何文本块计数（处理失败情况）
         if node_chunk_id is None:
+            # 直接获取当前实体的节点数据
             node_datas = await asyncio.gather(*[knowledge_graph_inst.get_node(k)])
             for dp in node_datas:
+                # 提取节点的文本块ID
                 text_units_node = split_string_by_multi_markers(
                     dp["source_id"], [GRAPH_FIELD_SEP]
                 )
+                # 统计文本块ID频次
                 count_dict = Counter(text_units_node)
 
+            # 选择频次最高的前max_chunks个文本块ID
             for id in count_dict.most_common(max_chunks):
                 v["Path"].append(id[0])
+            # 注释掉的备选实现，直接赋值结果列表
             # v['Path'] = count_dict.most_common(max_chunks)#[]
         else:
+            # 选择权重最高的前max_chunks个文本块ID
             for id in count_dict.most_common(max_chunks):
                 v["Path"].append(id[0])
+            # 注释掉的备选实现，直接赋值结果列表
             # v['Path'] = node_chunk_id.most_common(max_chunks)
+    
+    # 返回更新后的路径字典，其中Path字段已替换为文本块ID列表
     return scored_edged_reasoning_path
 
 
