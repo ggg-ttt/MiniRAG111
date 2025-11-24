@@ -439,12 +439,7 @@ async def _merge_nodes_then_upsert(
            - 查询知识图谱中是否已存在该实体
            - 如果存在，合并已存在节点的属性信息
            - 确保历史数据和新数据的完整融合
-    
-    数据结构处理:
-        - 实体类型：使用Counter统计频次，选择最高频类型
-        - 描述信息：去重排序后用分隔符连接
-        - 来源ID：解析已有ID，合并新ID，去重存储
-        - 异常处理：为各种边界情况提供默认值
+
     
     图存储操作:
         1. 检查已存在节点：调用get_node方法获取历史数据
@@ -452,26 +447,11 @@ async def _merge_nodes_then_upsert(
         3. 数据合并：将历史数据与新数据按规则合并
         4. 节点更新：调用upsert_node方法保存合并结果
         5. 结果返回：返回最终合并的节点数据
+    采用了以下策略来保证数据质量：
+    抗噪：通过“少数服从多数”的投票机制，过滤掉 LLM 偶尔产生的错误实体分类。
+    不遗忘：通过拼接描述，确保新旧知识都被保留，而不是直接覆盖。
+    幂等性：通过 set 去重和 sorted 排序，确保多次运行相同数据不会导致数据无限膨胀或顺序混乱。
     
-    性能优化:
-        - 使用Counter进行频次统计，效率较高
-        - 批量处理多个同名实体的合并操作
-        - 并发执行：支持与并发实体处理结合
-        - 内存管理：及时释放临时数据结构
-    
-    使用场景:
-        - 实体抽取后的批量合并处理
-        - 知识图谱构建中的节点融合
-        - 多文档实体信息的统一管理
-        - 增量更新和去重操作
-        
-    注意事项:
-        - 函数是异步的，支持并发处理多个实体
-        - 实体名称必须标准化，否则可能导致合并失败
-        - 合并策略的选择会影响最终的知识图谱质量
-        - source_id的完整性对追溯功能很重要
-        - 大量同名实体的合并可能消耗较多内存
-        - 建议在批量处理时监控内存使用情况
     """
     already_entitiy_types = []
     already_source_ids = []
@@ -974,23 +954,6 @@ async def extract_entities(
                - 避免无效的重复抽取和资源浪费
                - 提高处理效率和成本效益
         
-        LLM提示词体系:
-            1. entity_extract_prompt（实体抽取提示词）：
-               - 包含完整的知识图谱schema信息
-               - 提供具体的抽取格式和示例
-               - 指导LLM按特定格式输出结构化结果
-               - 确保输出的一致性和可解析性
-               
-            2. continue_prompt（继续抽取提示词）：
-               - 用于后续轮次的增量抽取
-               - 维持抽取的上下文连续性
-               - 指示LLM继续识别遗漏的实体和关系
-               
-            3. if_loop_prompt（循环判断提示词）：
-               - 询问是否需要继续下一轮抽取
-               - 基于内容复杂度和质量进行智能判断
-               - 支持自动化的处理优化
-        
         记录解析和数据提取:
             1. 结果分割：
                - 使用split_string_by_multi_markers解析LLM输出
@@ -1063,148 +1026,185 @@ async def extract_entities(
             - RAG系统的知识库构建
             - 大规模文本挖掘和知识提取
         
-        注意事项:
-            - LLM的质量和提示词设计直接影响抽取效果
-            - 多轮迭代增加了计算成本但显著提高质量
-            - 大量文本处理时注意API调用限制和成本控制
-            - 进度统计可能受并发处理影响存在微小偏差
-            - 建议在生产环境中添加更详细的日志记录
-            - 正则表达式的鲁棒性影响解析成功率
-            - 记录分割符的选择需要与LLM输出格式匹配
         """
+        # 使用nonlocal关键字访问闭包变量，这些变量用于跟踪处理进度
         nonlocal already_processed, already_entities, already_relations
-        chunk_key = chunk_key_dp[0]
-        chunk_dp = chunk_key_dp[1]
+        # 解包chunk_key_dp元组，获取文本块的唯一标识符
+        chunk_key = chunk_key_dp[0]  # 文本块的唯一标识符，用于追踪源文本位置
+        # 获取文本块的详细数据字典
+        chunk_dp = chunk_key_dp[1]   # 包含文本内容和其他元数据的字典
+        # 提取文本块的实际内容
         content = chunk_dp["content"]
+        # 根据上下文基础信息和输入文本格式化实体提取提示词
         hint_prompt = entity_extract_prompt.format(**context_base, input_text=content)
+        # 调用LLM函数执行实体提取，获取初始提取结果
         final_result = await use_llm_func(hint_prompt)
 
+        # 打包对话历史，用于后续的补充提取和上下文理解
         history = pack_user_ass_to_openai_messages(hint_prompt, final_result)
+        # 多次补充提取循环，最多执行entity_extract_max_gleaning次
         for now_glean_index in range(entity_extract_max_gleaning):
+            # 调用LLM进行补充提取，基于已有的对话历史
             glean_result = await use_llm_func(continue_prompt, history_messages=history)
 
+            # 更新对话历史和最终结果
             history += pack_user_ass_to_openai_messages(continue_prompt, glean_result)
             final_result += glean_result
+            # 检查是否已达到最大提取次数
             if now_glean_index == entity_extract_max_gleaning - 1:
                 break
 
+            # 向LLM询问是否还有更多实体或关系需要提取
             if_loop_result: str = await use_llm_func(
                 if_loop_prompt, history_messages=history
             )
+            # 清理响应结果，移除可能的引号并转为小写，便于比较
             if_loop_result = if_loop_result.strip().strip('"').strip("'").lower()
+            # 如果不需要继续提取，提前结束循环
             if if_loop_result != "yes":
                 break
 
+        # 根据配置的分隔符分割LLM返回的结构化结果
         records = split_string_by_multi_markers(
             final_result,
             [context_base["record_delimiter"], context_base["completion_delimiter"]],
         )
 
-        maybe_nodes = defaultdict(list)
-        maybe_edges = defaultdict(list)
+        # 初始化字典用于存储可能的实体和关系
+        maybe_nodes = defaultdict(list)  # 键为实体名称，值为实体信息列表
+        maybe_edges = defaultdict(list)  # 键为(源节点ID,目标节点ID)元组，值为关系信息列表
+        # 遍历每条记录，解析实体和关系信息
         for record in records:
+            # 使用正则表达式提取括号中的内容，匹配结构化数据
             record = re.search(r"\((.*)\)", record)
+            # 如果没有找到匹配项，跳过当前记录
             if record is None:
                 continue
+            # 获取括号中的内容
             record = record.group(1)
+            # 根据元组分隔符分割记录属性
             record_attributes = split_string_by_multi_markers(
                 record, [context_base["tuple_delimiter"]]
             )
+            # 尝试将记录处理为实体
             if_entities = await _handle_single_entity_extraction(
                 record_attributes, chunk_key
             )
+            # 如果成功处理为实体，添加到maybe_nodes字典
             if if_entities is not None:
                 maybe_nodes[if_entities["entity_name"]].append(if_entities)
                 continue
 
+            # 如果不是实体，则尝试处理为关系
             if_relation = await _handle_single_relationship_extraction(
                 record_attributes, chunk_key
             )
+            # 如果成功处理为关系，添加到maybe_edges字典
             if if_relation is not None:
                 maybe_edges[(if_relation["src_id"], if_relation["tgt_id"])].append(
                     if_relation
                 )
-        already_processed += 1
-        already_entities += len(maybe_nodes)
-        already_relations += len(maybe_edges)
+        # 更新处理计数
+        already_processed += 1  # 已处理的文本块数量加1
+        already_entities += len(maybe_nodes)  # 累加提取的实体数量（可能有重复）
+        already_relations += len(maybe_edges)  # 累加提取的关系数量（可能有重复）
+        # 选择当前进度指示器图标
         now_ticks = PROMPTS["process_tickers"][
             already_processed % len(PROMPTS["process_tickers"])
         ]
+        # 打印进度信息，使用\r覆盖当前行以保持进度条在同一行
         print(
             f"{now_ticks} Processed {already_processed} chunks, {already_entities} entities(duplicated), {already_relations} relations(duplicated)\r",
-            end="",
-            flush=True,
+            end="",  # 不换行
+            flush=True,  # 立即刷新输出
         )
+        # 返回提取的实体和关系字典
         return dict(maybe_nodes), dict(maybe_edges)
 
-    # use_llm_func is wrapped in ascynio.Semaphore, limiting max_async callings
+    # 注意：use_llm_func被asyncio.Semaphore包装，限制了最大并发调用数量，防止API过载
+    # 并发处理所有文本块，提高处理效率
     results = await asyncio.gather(
         *[_process_single_content(c) for c in ordered_chunks]
     )
-    print()  # clear the progress bar
-    maybe_nodes = defaultdict(list)
-    maybe_edges = defaultdict(list)
+    print()  # 输出空行，清除进度条
+    # 初始化全局的实体和关系字典，用于合并所有文本块的结果
+    maybe_nodes = defaultdict(list)  # 全局实体字典，键为实体名称
+    maybe_edges = defaultdict(list)  # 全局关系字典，键为节点ID对
+    # 合并所有文本块的处理结果
     for m_nodes, m_edges in results:
+        # 合并实体信息
         for k, v in m_nodes.items():
             maybe_nodes[k].extend(v)
+        # 合并关系信息，对节点ID进行排序以确保一致性（避免(a,b)和(b,a)被视为不同关系）
         for k, v in m_edges.items():
             maybe_edges[tuple(sorted(k))].extend(v)
+    # 并发合并相同实体并将其插入到知识图谱中
     all_entities_data = await asyncio.gather(
         *[
             _merge_nodes_then_upsert(k, v, knowledge_graph_inst, global_config)
             for k, v in maybe_nodes.items()
         ]
     )
+    # 并发合并相同关系并将其插入到知识图谱中
     all_relationships_data = await asyncio.gather(
         *[
             _merge_edges_then_upsert(k[0], k[1], v, knowledge_graph_inst, global_config)
             for k, v in maybe_edges.items()
         ]
     )
+    # 验证是否成功提取了实体
     if not len(all_entities_data):
         logger.warning("Didn't extract any entities, maybe your LLM is not working")
         return None
+    # 验证是否成功提取了关系
     if not len(all_relationships_data):
         logger.warning(
             "Didn't extract any relationships, maybe your LLM is not working"
         )
         return None
 
+    # 如果提供了实体向量数据库，将实体信息插入向量数据库以支持相似性检索
     if entity_vdb is not None:
+        # 构建实体向量数据库的插入数据，计算实体ID并准备向量内容
         data_for_vdb = {
             compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
-                "content": dp["entity_name"] + dp["description"],
-                "entity_name": dp["entity_name"],
+                "content": dp["entity_name"] + dp["description"],  # 实体名称+描述作为向量内容
+                "entity_name": dp["entity_name"],  # 保存原始实体名称
             }
             for dp in all_entities_data
         }
+        # 执行向量数据插入
         await entity_vdb.upsert(data_for_vdb)
+    # 再次插入实体向量数据，但这次使用空格分隔名称和描述
+    # 注：这里可能是代码冗余，也可能是为了提高不同检索场景下的匹配效果
     if entity_vdb is not None:
         data_for_vdb = {
             compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
-                "content": dp["entity_name"] + " " + dp["description"],
+                "content": dp["entity_name"] + " " + dp["description"],  # 实体名称+空格+描述
                 "entity_name": dp["entity_name"],
             }
             for dp in all_entities_data
         }
         await entity_vdb.upsert(data_for_vdb)
 
+    # 如果提供了实体名称向量数据库，仅将实体名称插入向量数据库以支持精确名称匹配
     if entity_name_vdb is not None:
         data_for_vdb = {
             compute_mdhash_id(dp["entity_name"], prefix="Ename-"): {
-                "content": dp["entity_name"],
+                "content": dp["entity_name"],  # 仅使用实体名称作为向量内容
                 "entity_name": dp["entity_name"],
             }
             for dp in all_entities_data
         }
         await entity_name_vdb.upsert(data_for_vdb)
 
+    # 如果提供了关系向量数据库，将关系信息插入向量数据库
     if relationships_vdb is not None:
         data_for_vdb = {
             compute_mdhash_id(dp["src_id"] + dp["tgt_id"], prefix="rel-"): {
-                "src_id": dp["src_id"],
-                "tgt_id": dp["tgt_id"],
-                "content": dp["keywords"]
+                "src_id": dp["src_id"],  # 源实体ID
+                "tgt_id": dp["tgt_id"],  # 目标实体ID
+                "content": dp["keywords"]  # 构建关系内容，包含关键词、源ID、目标ID和描述
                 + " " + dp["src_id"]
                 + " " + dp["tgt_id"]
                 + " " + dp["description"],
@@ -1214,6 +1214,7 @@ async def extract_entities(
 
         await relationships_vdb.upsert(data_for_vdb)
 
+    # 返回更新后的知识图谱实例
     return knowledge_graph_inst
 
 
@@ -3288,7 +3289,7 @@ async def _build_mini_query_context(
     Returns:
         str: 上下文字符串
     """
-    # 初始化重要实体列表，用于存储后续处理中的关键实体
+    # 1初始化重要实体列表，用于存储后续处理中的关键实体
     imp_ents = []
     # 初始化查询节点列表，存储从实体名称向量数据库查询的结果
     nodes_from_query_list = []
@@ -3324,7 +3325,7 @@ async def _build_mini_query_context(
             **candidate_reasoning_path_new,
         }
     
-    # 为每个候选实体查找k跳邻居路径
+    # 2为每个候选实体查找k跳邻居路径
     for key in candidate_reasoning_path.keys():
         # 获取实体的2跳邻居路径信息
         candidate_reasoning_path[key][
@@ -3332,7 +3333,7 @@ async def _build_mini_query_context(
         ] = await knowledge_graph_inst.get_neighbors_within_k_hops(key, 2)
         # 将实体添加到重要实体列表
         imp_ents.append(key)
-
+    #3. 路径筛选与优化
     # 过滤出路径长度小于1的短路径条目（没有邻居节点的实体）
     short_path_entries = {
         name: entry
@@ -3358,7 +3359,8 @@ async def _build_mini_query_context(
     }
     # 合并长路径和高分短路径，形成新的候选推理路径
     candidate_reasoning_path = {**long_path_entries, **top_short_path_dict}
-    
+
+    # 4. 获取可能的答案节点并进行路径评分
     # 根据类型关键词获取相关节点
     node_datas_from_type = await knowledge_graph_inst.get_node_from_types(
         type_keywords
@@ -3373,6 +3375,7 @@ async def _build_mini_query_context(
         candidate_reasoning_path, maybe_answer_list
     )
 
+    # 5. 获取相关关系并进行边投票优化（关键步骤2）
     # 在关系向量数据库中查询与原始查询相关的关系
     results_edge = await relationships_vdb.query(
         originalquery, top_k=len(ent_from_query) * query_param.top_k
@@ -3391,7 +3394,7 @@ async def _build_mini_query_context(
     scored_edged_reasoning_path, pairs_append = edge_vote_path(
         scored_reasoning_path, goodedge
     )
-    
+    # 6. 路径转文本块
     # 将推理路径转换为相关文本块，添加更多上下文信息
     scored_edged_reasoning_path = await path2chunk(
         scored_edged_reasoning_path,  # 优化后的推理路径
@@ -3401,6 +3404,7 @@ async def _build_mini_query_context(
         max_chunks=3,  # 每个路径最多关联3个文本块
     )
 
+    #7. 构建最终上下文
     # 初始化实体部分列表，用于构建最终的实体上下文
     entites_section_list = []
     # 并发获取所有实体的详细信息
@@ -3536,11 +3540,6 @@ async def minirag_query(  # MiniRAG
         7. 上下文构建：组织实体、关系、文本块为标准格式上下文
         8. LLM生成：调用专用LLM模型生成基于推理的回答
         
-    核心特性:
-        - 类型感知：理解查询中的实体类型，精确匹配知识图谱中的类型体系
-        - 路径推理：支持多跳推理发现隐含关联，解决复杂查询问题
-        - 边投票：通过投票机制筛选高质量关系连接，提升推理准确性
-        - 层次查询：结合名称检索和内容检索，提供多维度的实体发现能力
     """
     # 从全局配置中获取LLM模型调用函数
     use_model_func = global_config["llm_model_func"]

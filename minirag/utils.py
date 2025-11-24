@@ -469,7 +469,10 @@ def count_elements_in_tuple(tuple_elements, list_elements):
 
 def cal_path_score_list(candidate_reasoning_path, maybe_answer_list):
     """
-    为候选推理路径打分。分数基于路径中包含“可能答案”节点的数量。
+    cal_path_score_list函数的作用 ：
+    输入：候选推理路径字典和可能答案节点列表
+    功能：为每条路径计算一个分数，基于路径中包含的"可能答案"节点数量
+    实现机制：遍历每条路径，检查路径中的节点是否在maybe_answer_list中，找到匹配的节点后，根据节点在路径中的位置赋予不同权重的分数
     """
     scored_reasoning_path = {}
     for k, v in candidate_reasoning_path.items():
@@ -485,17 +488,15 @@ def cal_path_score_list(candidate_reasoning_path, maybe_answer_list):
 
 def edge_vote_path(path_dict, edge_list):
     """
-    使用给定的边列表（edge_list）对路径进行投票，从而调整路径分数。
-    通过计算与查询相关的边在路径中的出现次数来增强相关路径的权重。
-    
-    Args:
-        path_dict: 路径字典，键为实体名称，值为包含路径信息和分数的字典
-        edge_list: 边列表，包含查询相关的边信息
-    
-    Returns:
-        tuple: (更新后的路径字典, 路径-边对应字典)
-            - 更新后的路径字典：包含每条路径的新增投票分数
-            - 路径-边对应字典：记录每条路径中包含的所有查询相关边
+    edge_vote_path函数的作用 ：
+
+    - 输入：根据出现关键节点数量评分后的推理路径path_dict,和"好边"列表edge_list
+    - 功能：通过边投票机制进一步优化路径评分
+    - 实现机制：
+    1. 构建一个边列表(EDGELIST)，用于快速查找
+    2. 遍历每条路径，检查路径中的连续节点对是否在这个边列表中
+    3. 如果找到匹配的边，则增加该路径的分数作为投票
+    4. 返回更新后的路径和需要后续处理的新增实体对
     """
     # 创建路径字典的深拷贝，避免修改原数据
     return_dict = copy.deepcopy(path_dict)
