@@ -11,7 +11,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 导入MiniRAG相关模块和函数
 from minirag import MiniRAG
 from minirag.llm import (
-    gpt_4o_mini_complete,
+    hf_model_complete,
     hf_embed,
 )
 from minirag.utils import EmbeddingFunc
@@ -25,10 +25,10 @@ import argparse
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
-    parser.add_argument("--model", type=str, default="PHI")  # 指定LLM模型
+    parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
     parser.add_argument("--outputpath", type=str, default="./logs/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./LiHua-World")  # 工作目录
-    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/")  # 数据目录
+    parser.add_argument("--workingdir", type=str, default="./tests")  # 工作目录
+    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
@@ -46,7 +46,7 @@ elif args.model == "GLM":
 elif args.model == "MiniCPM":
     LLM_MODEL = "openbmb/MiniCPM3-4B"
 elif args.model == "qwen":
-    LLM_MODEL = "Qwen/Qwen2.5-3B-Instruct"
+    LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 else:
     print("Invalid model name")
     exit(1)
@@ -66,8 +66,7 @@ if not os.path.exists(WORKING_DIR):
 # 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    # llm_model_func=hf_model_complete,
-    llm_model_func=gpt_4o_mini_complete,  # 指定LLM推理函数
+    llm_model_func=hf_model_complete,  # 指定LLM推理函数
     llm_model_max_token_size=200,         # LLM最大token数
     llm_model_name=LLM_MODEL,             # LLM模型名称
     embedding_func=EmbeddingFunc(

@@ -26,3 +26,5 @@ examples/output/
 *.ini
 build/
 minirag-venv/
+dataset/
+tests/
