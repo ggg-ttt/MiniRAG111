@@ -157,21 +157,63 @@ class NetworkXStorage(BaseGraphStorage):
         return list(types), list(types_with_case)
 
 
-    async def get_node_from_types(self,type_list)  -> Union[dict, None]:
+    async def get_node_from_types(self, type_list) -> Union[list[dict], None]:
+        """
+        根据实体类型列表从知识图谱中获取所有匹配的节点及其详细信息
+        
+        该方法是MiniRAG知识图谱检索的核心组件之一，负责根据类型关键词筛选相关实体节点。
+        
+        Args:
+            type_list (list[str]): 实体类型列表，包含需要匹配的实体类型关键词
+                这些类型关键词通常由LLM从用户查询中提取，用于引导答案节点的识别
+                例如：["人物", "组织", "事件"]
+        
+        Returns:
+            Union[list[dict], None]: 匹配节点的详细信息列表，如果没有匹配则返回None
+                每个节点字典包含实体的完整属性信息，如：
+                - entity_name: 实体名称
+                - entity_type: 实体类型
+                - description: 实体描述
+                - 其他自定义属性
+        
+        算法流程:
+            1. 初始化空的节点名称列表，用于存储匹配的节点名称
+            2. 遍历知识图谱中的所有节点，检查其类型是否在目标类型列表中
+            3. 对匹配的节点，收集其名称到节点列表中
+            4. 并发获取所有匹配节点的详细信息，提高查询效率
+            5. 合并节点名称和详细信息，构建完整的节点数据结构
+            6. 过滤掉可能的空结果，返回最终的节点数据列表
+        """
+        # 初始化节点名称列表，用于存储匹配指定类型的节点名称
         node_list = []
-        for name, arrt in self._graph.nodes(data = True):
-            node_type = arrt.get('entity_type').strip('\"')
+        
+        # 遍历知识图谱中的所有节点及其属性
+        for name, arrt in self._graph.nodes(data=True):
+            # 获取节点的实体类型，并去除可能存在的首尾引号
+            node_type = arrt.get('entity_type').strip('"')
+            
+            # 检查节点类型是否在目标类型列表中
             if node_type in type_list:
+                # 如果匹配，则将节点名称添加到结果列表中
                 node_list.append(name)
+        
+        # 使用异步并发方式获取所有匹配节点的详细信息
+        # 这是一个显著的性能优化，避免了串行查询的延迟
         node_datas = await asyncio.gather(
             *[self.get_node(name) for name in node_list]
         )
+        
+        # 合并节点名称和详细信息，构建完整的节点数据结构
+        # 同时过滤掉可能为None的节点数据
         node_datas = [
-            {**n, "entity_name": k}
+            {**n, "entity_name": k}  # 将节点名称添加到节点数据中
             for k, n in zip(node_list, node_datas)
-            if n is not None
+            if n is not None  # 只保留有效节点
         ]
-        return node_datas#,node_dict
+        
+        # 返回匹配节点的详细信息列表
+        # 注：原始代码中有一个被注释的node_dict返回值，可能是用于调试或历史版本的产物
+        return node_datas
     
 
     async def get_neighbors_within_k_hops(self,source_node_id: str, k):
