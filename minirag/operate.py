@@ -3302,7 +3302,16 @@ async def _build_mini_query_context(
         ent_from_query_dict[ent] = []
         # 在实体名称向量数据库中查询匹配的实体
         results_node = await entity_name_vdb.query(ent, top_k=query_param.top_k)
-
+        #nanovector:         results = [
+        #     {
+        #         **dp,
+        #         "id": dp["__id__"],
+        #         "distance": dp["__metrics__"],  # 字段表示查询文本与数据库中存储的实体名称之间的相似度距离
+        #         "created_at": dp.get("__created_at__"),
+        #     }
+        #     for dp in results
+        # ]
+        # 
         # 将查询结果添加到节点列表中
         nodes_from_query_list.append(results_node)
         # 提取实体名称并保存到字典中
@@ -3318,8 +3327,20 @@ async def _build_mini_query_context(
             key["entity_name"]: {"Score": key["distance"], "Path": []}
             for key in results_node_list
         }
-
+        #值为包含两个字段的字典：
+        # - Score : 存储实体与查询的相似度距离（用于后续排序）
+        # - Path : 初始为空列表，准备用于存储从该实体出发的推理路径
         # 合并新路径到候选推理路径字典
+        
+        # "实体名称1": {
+        #     "Score": 距离分数值,  # 来自results_node_list中对应元素的distance字段
+        #     "Path": []           # 初始为空列表，后续会填充路径信息
+        # },
+        # "实体名称2": {
+        #     "Score": 距离分数值,
+        #     "Path": []
+        # },
+        # # 更多实体...
         candidate_reasoning_path = {
             **candidate_reasoning_path,
             **candidate_reasoning_path_new,
@@ -3327,7 +3348,7 @@ async def _build_mini_query_context(
     
     # 2为每个候选实体查找k跳邻居路径
     for key in candidate_reasoning_path.keys():
-        # 获取实体的2跳邻居路径信息
+        # 获取实体的2跳邻居路径信息（candidate_reasoning_path返回从该节点出发的所有 2 跳路径（元组形式，如 (A, B, C)））
         candidate_reasoning_path[key][
             "Path"
         ] = await knowledge_graph_inst.get_neighbors_within_k_hops(key, 2)
