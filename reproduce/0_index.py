@@ -26,8 +26,8 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./logs/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests")  # 工作目录
+    parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出路径
+    parser.add_argument("--workingdir", type=str, default="./tests/Qwen")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"

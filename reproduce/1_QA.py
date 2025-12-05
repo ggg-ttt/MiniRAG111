@@ -26,10 +26,10 @@ import argparse
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
-    parser.add_argument("--model", type=str, default="PHI")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./logs/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./LiHua-World")  # 工作目录
-    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/")  # 数据目录
+    parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
+    parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出文件的路径，追加本次回答
+    parser.add_argument("--workingdir", type=str, default="./tests/Qwen")  # 工作目录
+    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
@@ -47,7 +47,7 @@ elif args.model == "GLM":
 elif args.model == "MiniCPM":
     LLM_MODEL = "openbmb/MiniCPM3-4B"
 elif args.model == "qwen":
-    LLM_MODEL = "Qwen/Qwen2.5-3B-Instruct"
+    LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 else:
     print("Invalid model name")
     exit(1)
@@ -93,7 +93,7 @@ with open(QUERY_PATH, mode="r", encoding="utf-8") as question_file:
 
 # 运行实验并记录结果
 def run_experiment(output_path):
-    headers = ["Question", "Gold Answer", "minirag"]  # CSV表头
+    headers = ["Question", "Gold Answer", "naiveRAG"]  # CSV表头
 
     q_already = []
     # 检查输出文件是否已存在，避免重复写入
@@ -123,7 +123,7 @@ def run_experiment(output_path):
             try:
                 # 使用MiniRAG进行问答
                 minirag_answer = (
-                    rag.query(QUESTION, param=QueryParam(mode="mini"))
+                    rag.query(QUESTION, param=QueryParam(mode="naive"))
                     .replace("\n", "")
                     .replace("\r", "")
                 )
