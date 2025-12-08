@@ -21,14 +21,17 @@ from transformers import AutoModel, AutoTokenizer
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 import argparse
+import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
+import os
+os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
     parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507")  # 工作目录
+    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_batch4")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
@@ -67,13 +70,17 @@ print("USING WORKING DIR:", WORKING_DIR)
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
 
-# 预先加载分词器与嵌入模型，避免在循环中重复加载（显著提速）
+# 预先加载分词器与嵌入模型，避免在循环中重复加载（显著提速）默认auto是自动第一个
 tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL, device_map="auto")
 if tokenizer.pad_token is None:
     tokenizer.pad_token = tokenizer.eos_token
-embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL, device_map="auto")
+embed_model = AutoModel.from_pretrained(
+    EMBEDDING_MODEL,
+    device_map="auto",
+    dtype=torch.float16,  # 降低显存占用
+)
 
-# 初始化MiniRAG对象
+# 初始化MiniRAG对象d
 rag = MiniRAG(
     working_dir=WORKING_DIR,
     llm_model_func=hf_model_complete,      # 指定LLM推理函数
@@ -111,8 +118,8 @@ def load_txt_file(path: str):
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 # print("CPU核心数:", os.cpu_count())
-max_workers = min(32, (os.cpu_count() or 4) * 2)
-BATCH_SIZE = 32
+max_workers = 8
+BATCH_SIZE = 4  # 减小单批文档数，降低单次显存压力
 buffer = []
 with ThreadPoolExecutor(max_workers=max_workers) as executor:
     futures = [executor.submit(load_txt_file, path) for path in WEEK_LIST]
@@ -121,13 +128,14 @@ with ThreadPoolExecutor(max_workers=max_workers) as executor:
         total=len(WEEK_LIST),
         desc="读取并插入",
         unit="file",
-        mininterval=10.0,  # 控制进度条刷新间隔（秒），可按需调整
+        mininterval=1.0,  # 控制进度条刷新间隔（秒），可按需调整
     ):
         buffer.append(future.result())
         if len(buffer) >= BATCH_SIZE:
-            rag.insert("\n\n".join(buffer))
+            # 保持文档粒度，直接传列表，避免跨文件合并导致实体/关系混淆
+            rag.insert(buffer)
             buffer.clear()
 
 # 插入剩余不足一批的内容
 if buffer:
-    rag.insert("\n\n".join(buffer))
+    rag.insert(buffer)
