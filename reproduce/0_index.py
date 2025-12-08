@@ -21,14 +21,15 @@ from transformers import AutoModel, AutoTokenizer
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 import argparse
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
     parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/Qwen")  # 工作目录
-    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")  # 数据目录
+    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507")  # 工作目录
+    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
@@ -56,6 +57,9 @@ WORKING_DIR = args.workingdir
 DATA_PATH = args.datapath
 QUERY_PATH = args.querypath
 OUTPUT_PATH = args.outputpath
+# BATCH_TEST_DATAPATH = "./dataset/LiHua-World/data/LiHua-World/week2"
+
+
 print("USING LLM:", LLM_MODEL)
 print("USING WORKING DIR:", WORKING_DIR)
 
@@ -63,19 +67,25 @@ print("USING WORKING DIR:", WORKING_DIR)
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
 
+# 预先加载分词器与嵌入模型，避免在循环中重复加载（显著提速）
+tokenizer = AutoTokenizer.from_pretrained(EMBEDDING_MODEL, device_map="auto")
+if tokenizer.pad_token is None:
+    tokenizer.pad_token = tokenizer.eos_token
+embed_model = AutoModel.from_pretrained(EMBEDDING_MODEL, device_map="auto")
+
 # 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=hf_model_complete,  # 指定LLM推理函数
-    llm_model_max_token_size=200,         # LLM最大token数
-    llm_model_name=LLM_MODEL,             # LLM模型名称
+    llm_model_func=hf_model_complete,      # 指定LLM推理函数
+    llm_model_max_token_size=8192,         # LLM最大token数
+    llm_model_name=LLM_MODEL,              # LLM模型名称
     embedding_func=EmbeddingFunc(
-        embedding_dim=384,                # 嵌入维度
-        max_token_size=1000,              # 嵌入最大token数
+        embedding_dim=384,                 # 嵌入维度
+        max_token_size=1000,               # 嵌入最大token数
         func=lambda texts: hf_embed(
             texts,
-            tokenizer=AutoTokenizer.from_pretrained(EMBEDDING_MODEL),  # 加载分词器
-            embed_model=AutoModel.from_pretrained(EMBEDDING_MODEL),    # 加载嵌入模型
+            tokenizer=tokenizer,           # 复用分词器
+            embed_model=embed_model,       # 复用模型
         ),
     ),
 )
@@ -88,12 +98,36 @@ def find_txt_files(root_path):
             if file.endswith(".txt"):
                 txt_files.append(os.path.join(root, file))
     return txt_files
+from tqdm import tqdm
 
-# 获取所有txt文件路径
+# WEEK_LIST = find_txt_files(BATCH_TEST_DATAPATH)
+#测试batch大小
 WEEK_LIST = find_txt_files(DATA_PATH)
-for WEEK in WEEK_LIST:
-    id = WEEK_LIST.index(WEEK)
-    print(f"{id}/{len(WEEK_LIST)}")
-    # 读取每个txt文件内容并插入到RAG索引中
-    with open(WEEK) as f:
-        rag.insert(f.read())
+# 获取所有txt文件路径
+print(f"共找到 {len(WEEK_LIST)} 个txt文件，开始处理...")
+
+# 使用线程池并行读取文件，按批次边读边插入，避免一次性占用大量内存
+def load_txt_file(path: str):
+    with open(path, "r", encoding="utf-8") as f:
+        return f.read()
+# print("CPU核心数:", os.cpu_count())
+max_workers = min(32, (os.cpu_count() or 4) * 2)
+BATCH_SIZE = 32
+buffer = []
+with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    futures = [executor.submit(load_txt_file, path) for path in WEEK_LIST]
+    for future in tqdm(
+        as_completed(futures),
+        total=len(WEEK_LIST),
+        desc="读取并插入",
+        unit="file",
+        mininterval=10.0,  # 控制进度条刷新间隔（秒），可按需调整
+    ):
+        buffer.append(future.result())
+        if len(buffer) >= BATCH_SIZE:
+            rag.insert("\n\n".join(buffer))
+            buffer.clear()
+
+# 插入剩余不足一批的内容
+if buffer:
+    rag.insert("\n\n".join(buffer))

@@ -148,7 +148,7 @@ async def hf_model_if_cache(
     ).to("cuda")
     inputs = {k: v.to(hf_model.device) for k, v in input_ids.items()}
     output = hf_model.generate(
-        **input_ids, max_new_tokens=512, num_return_sequences=1, early_stopping=True
+        **input_ids, max_new_tokens=512, num_return_sequences=1
     )
     response_text = hf_tokenizer.decode(
         output[0][len(inputs["input_ids"][0]) :], skip_special_tokens=True
@@ -176,12 +176,25 @@ async def hf_model_complete(
 
 async def hf_embed(texts: list[str], tokenizer, embed_model) -> np.ndarray:
     device = next(embed_model.parameters()).device
-    input_ids = tokenizer(
+    # 同时返回 attention_mask，避免 padding 位置干扰，并传入模型
+    encoded = tokenizer(
         texts, return_tensors="pt", padding=True, truncation=True
-    ).input_ids.to(device)
+    )
+    encoded = {k: v.to(device) for k, v in encoded.items()}
     with torch.no_grad():
-        outputs = embed_model(input_ids)
-        embeddings = outputs.last_hidden_state.mean(dim=1)
+        outputs = embed_model(
+            encoded["input_ids"],
+            attention_mask=encoded.get("attention_mask"),
+        )
+        last_hidden = outputs.last_hidden_state
+        mask = encoded.get("attention_mask")
+        if mask is not None:
+            mask_expanded = mask.unsqueeze(-1).expand(last_hidden.size()).float()
+            sum_embeddings = (last_hidden * mask_expanded).sum(dim=1)
+            sum_mask = mask_expanded.sum(dim=1).clamp(min=1e-9)
+            embeddings = sum_embeddings / sum_mask
+        else:
+            embeddings = last_hidden.mean(dim=1)
     if embeddings.dtype == torch.bfloat16:
         return embeddings.detach().to(torch.float32).cpu().numpy()
     else:

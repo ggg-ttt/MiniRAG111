@@ -982,6 +982,7 @@ class MiniRAG:
             self.doc_status.get_docs_by_status(DocStatus.PENDING),
         )
 
+        # 合并三种状态的文档，准备统一处理；失败/处理中会重试
         to_process_docs: dict[str, Any] = {
             **processing_docs,
             **failed_docs,
@@ -991,6 +992,7 @@ class MiniRAG:
             logger.info("No documents to process")
             return
 
+        # 按 max_parallel_insert 切分批次，防止一次处理过多文档
         docs_batches = [
             list(to_process_docs.items())[i : i + self.max_parallel_insert]
             for i in range(0, len(to_process_docs), self.max_parallel_insert)
@@ -999,6 +1001,7 @@ class MiniRAG:
 
         for batch_idx, docs_batch in enumerate(docs_batches):
             for doc_id, status_doc in docs_batch:
+                # 对单个文档做分块，生成 chunk id，并补充 full_doc_id 关联
                 chunks = {
                     compute_mdhash_id(dp["content"], prefix="chunk-"): {
                         **dp,
@@ -1011,11 +1014,13 @@ class MiniRAG:
                         self.tiktoken_model_name,
                     )
                 }
+                # 并发写入：向量库、全文存储、chunk 存储
                 await asyncio.gather(
                     self.chunks_vdb.upsert(chunks),
                     self.full_docs.upsert({doc_id: {"content": status_doc.content}}),
                     self.text_chunks.upsert(chunks),
                 )
+                # 更新文档状态为 PROCESSED，记录 chunk 数量与元信息
                 await self.doc_status.upsert(
                     {
                         doc_id: {
