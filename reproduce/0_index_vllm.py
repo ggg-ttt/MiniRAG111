@@ -25,7 +25,7 @@ from minirag.llm import (
     hf_embed,  # Embedding 使用 transformers，vLLM 不提供 embedding 功能
     openai_complete_if_cache,  # 直接使用底层函数，可以传递 base_url
 )
-from minirag.utils import EmbeddingFunc
+from minirag.utils import EmbeddingFunc, compute_mdhash_id
 from transformers import AutoModel, AutoTokenizer
 
 # 指定用于文本嵌入的模型【】
@@ -34,6 +34,7 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 import argparse
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import json
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
@@ -52,7 +53,7 @@ args = get_args()
 
 # 根据参数选择不同的LLM模型
 if args.model == "PHI":
-    LLM_MODEL = "microsoft/Phi-3.5-mini-instruct"
+    LLM_MODEL = "microsoft/Phi-4-mini-instruct"
 elif args.model == "GLM":
     LLM_MODEL = "THUDM/glm-edge-1.5b-chat"
 elif args.model == "MiniCPM":
@@ -139,6 +140,21 @@ rag = MiniRAG(
     ),
 )
 
+# 载入已处理文档的 doc_id 集合（来源：working_dir/kv_store_full_docs.json）
+def load_processed_doc_ids(work_dir: str):
+    kv_path = os.path.join(work_dir, "kv_store_full_docs.json")
+    if not os.path.exists(kv_path):
+        return set()
+    try:
+        with open(kv_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.keys())
+    except Exception as e:
+        print(f"Warning: failed to load processed doc ids from {kv_path}: {e}")
+        return set()
+
+processed_doc_ids = load_processed_doc_ids(WORKING_DIR)
+
 # 查找指定目录下所有txt文件
 def find_txt_files(root_path):
     txt_files = []
@@ -158,7 +174,7 @@ print(f"共找到 {len(WEEK_LIST)} 个txt文件，开始处理...")
 # 使用线程池并行读取文件，按批次边读边插入，避免一次性占用大量内存
 def load_txt_file(path: str):
     with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+        return path, f.read()
 # print("CPU核心数:", os.cpu_count())
 max_workers = 4
 BATCH_SIZE = 2  # 减小单批文档数，降低单次显存压力
@@ -172,7 +188,15 @@ with ThreadPoolExecutor(max_workers=max_workers) as executor:
         unit="file",
         mininterval=1.0,  # 控制进度条刷新间隔（秒），可按需调整
     ):
-        buffer.append(future.result())
+        file_path, content = future.result()
+
+        # 基于内容计算 doc_id（与 MiniRAG 内部一致的 MD5 前缀）
+        doc_id = compute_mdhash_id(content, prefix="doc-")
+        if doc_id in processed_doc_ids:
+            # 已处理文档，跳过
+            continue
+
+        buffer.append(content)
         if len(buffer) >= BATCH_SIZE:
             # 保持文档粒度，直接传列表，避免跨文件合并导致实体/关系混淆
             rag.insert(buffer)
