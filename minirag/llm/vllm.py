@@ -45,19 +45,59 @@ device = "cuda" if torch.cuda.is_available() else "cpu"  # 尽量使用 GPU，�
 
 MS_MODEL_ROOT = "/data/gty/.cache/modelscope/hub/models"  # ModelScope 本地缓存根目录
 
+# 使用全局变量缓存模型实例，避免重复加载
+_vllm_model_cache = {}
 
-@lru_cache(maxsize=1)
 def initialize_vllm_model(model_name: str):
-    """
-    Load a vLLM chat model once and cache it for reuse.
-    Mirrors the behavior implemented in PathRAG's llm.py.
-    """
-    ms_local_path = os.path.join(MS_MODEL_ROOT, model_name)
-    resolved_model = ms_local_path if os.path.isdir(ms_local_path) else model_name
-    logger.info("Initializing vLLM model: %s", resolved_model)
-    # vLLM 会在首次调用时常驻显存；使用缓存避免重复加载
-    return LLM(model=resolved_model, device=device, max_model_len=8192)
-
+    """加载 vLLM 聊天模型并缓存（使用全局变量，确保在异步环境下也能正确缓存）"""
+    if model_name not in _vllm_model_cache:
+        import time
+        start_time = time.time()
+        logger.info("Initializing vLLM model: %s (this may take a while...)", model_name)
+        
+        # 如果可用，显示 GPU 显存信息
+        if torch.cuda.is_available():
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    gpu_info = result.stdout.strip().split('\n')
+                    logger.info("GPU memory before loading: %s", gpu_info)
+            except Exception:
+                pass  # 忽略 nvidia-smi 调用失败
+        
+        model = LLM(model_name, max_model_len=8192)  # 修改：移除不支持的 device 参数
+        _vllm_model_cache[model_name] = model
+        
+        load_time = time.time() - start_time
+        logger.info(
+            "vLLM model loaded successfully: %s (took %.2f seconds)",
+            model_name, load_time
+        )
+        
+        # 显示加载后的 GPU 显存信息
+        if torch.cuda.is_available():
+            try:
+                import subprocess
+                result = subprocess.run(
+                    ["nvidia-smi", "--query-gpu=memory.used,memory.total", "--format=csv,noheader,nounits"],
+                    capture_output=True,
+                    text=True,
+                    timeout=5
+                )
+                if result.returncode == 0:
+                    gpu_info = result.stdout.strip().split('\n')
+                    logger.info("GPU memory after loading: %s", gpu_info)
+            except Exception:
+                pass  # 忽略 nvidia-smi 调用失败
+    else:
+        logger.debug("Reusing cached vLLM model: %s", model_name)
+    return _vllm_model_cache[model_name]
 
 @retry(
     stop=stop_after_attempt(3),
@@ -136,10 +176,13 @@ async def vllm_model_complete(
     return result
 
 
-async def vllm_embedding(texts: list[str], tokenizer, embed_model) -> np.ndarray:
+async def vllm_embed(texts: list[str], tokenizer, embed_model) -> np.ndarray:
     """
     Simple embedding helper used by PathRAG.
     Keeps the same signature so it can be wired via EmbeddingFunc.
+    
+    Note: This function actually uses transformers models, not vLLM.
+    vLLM is only used for LLM inference acceleration, not for embeddings.
     """
     device = next(embed_model.parameters()).device  # 与建模设备保持一致
     input_ids = tokenizer(

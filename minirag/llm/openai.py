@@ -102,9 +102,13 @@ async def openai_complete_if_cache(
     if api_key:
         os.environ["OPENAI_API_KEY"] = api_key
     if base_url==None:
-        base_url = os.environ["OPENAI_API_BASE"]
+        base_url = os.environ.get("OPENAI_API_BASE")
+    # 创建 OpenAI 客户端，确保传递 api_key（即使是 dummy key）
+    # 如果 api_key 未设置，使用环境变量或 dummy key
+    client_api_key = api_key or os.environ.get("OPENAI_API_KEY", "dummy")
     openai_async_client = (
-        AsyncOpenAI() if base_url is None else AsyncOpenAI(base_url=base_url)
+        AsyncOpenAI(api_key=client_api_key) if base_url is None 
+        else AsyncOpenAI(base_url=base_url, api_key=client_api_key)
     )
     kwargs.pop("hashing_kv", None)
     kwargs.pop("keyword_extraction", None)

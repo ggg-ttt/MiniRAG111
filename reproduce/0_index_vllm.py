@@ -4,6 +4,17 @@
 
 import sys
 import os
+import logging
+
+# 设置 CUDA 可见设备
+os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+
+# 控制 vLLM 和 OpenAI 客户端的日志级别
+# 可选值: DEBUG, INFO, WARNING, ERROR, CRITICAL
+# 设置为 WARNING 或 ERROR 可以减少日志输出
+os.environ["VLLM_LOGGING_LEVEL"] = "WARNING"  # 控制 vLLM server 的日志级别
+logging.getLogger("openai").setLevel(logging.WARNING)  # 控制 OpenAI 客户端的日志级别
+logging.getLogger("httpx").setLevel(logging.WARNING)  # 控制 HTTP 请求的日志级别
 
 # 将上级目录加入sys.path，方便导入minirag包
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -11,29 +22,24 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 导入MiniRAG相关模块和函数
 from minirag import MiniRAG
 from minirag.llm import (
-    hf_model_complete,
-    hf_embed,
-    vllm_model_complete,
-    vllm_embed
+    hf_embed,  # Embedding 使用 transformers，vLLM 不提供 embedding 功能
+    openai_complete_if_cache,  # 直接使用底层函数，可以传递 base_url
 )
 from minirag.utils import EmbeddingFunc
 from transformers import AutoModel, AutoTokenizer
 
-# 指定用于文本嵌入的模型
+# 指定用于文本嵌入的模型【】
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 import argparse
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
-
-import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
     parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_batch4")  # 工作目录
+    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
@@ -82,20 +88,54 @@ embed_model = AutoModel.from_pretrained(
     dtype=torch.float16,  # 降低显存占用
 )
 
-# 初始化MiniRAG对象d
+# vLLM Server 配置
+VLLM_SERVER_BASE_URL = "http://0.0.0.0:8000/v1"  # vLLM server 地址
+VLLM_API_KEY = None  # 如果 vLLM server 设置了 API key，在这里填写
+
+# 创建包装函数，连接到 vLLM server
+async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs):
+    """通过 vLLM server 调用模型的包装函数"""
+    # 从 kwargs 中获取模型名称（MiniRAG 会通过 hashing_kv 传递）
+    keyword_extraction = kwargs.pop("keyword_extraction", None)
+    model_name = kwargs["hashing_kv"].global_config["llm_model_name"]
+    
+    # vLLM server 不需要真实的 API key，但 OpenAI 客户端要求必须设置
+    # 如果未设置，使用 dummy key
+    api_key = VLLM_API_KEY if VLLM_API_KEY else "dummy"
+    
+    # 调用 openai_complete_if_cache，指定 base_url 连接到 vLLM server
+    result = await openai_complete_if_cache(
+        model=model_name,
+        prompt=prompt,
+        system_prompt=system_prompt,
+        history_messages=history_messages,
+        base_url=VLLM_SERVER_BASE_URL,  # 指定 vLLM server 地址
+        api_key=api_key,  # API key（vLLM server 不需要真实 key，但客户端要求必须设置）
+        **kwargs
+    )
+    
+    # 如果需要关键词提取，处理 JSON 响应
+    if keyword_extraction:
+        from minirag.utils import locate_json_string_body_from_string
+        return locate_json_string_body_from_string(result)
+    
+    return result
+
+# 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=hf_model_complete,      # 指定LLM推理函数
+    llm_model_func=vllm_server_complete,  # 使用 vLLM server 包装函数
     llm_model_max_token_size=8192,         # LLM最大token数
     llm_model_name=LLM_MODEL,              # LLM模型名称
+    embedding_batch_num=16,                # 减小embedding批次大小，降低显存占用（默认32）
     embedding_func=EmbeddingFunc(
         embedding_dim=384,                 # 嵌入维度
         max_token_size=1000,               # 嵌入最大token数
-        func=lambda texts: hf_embed(
+        func=lambda texts: hf_embed(      # 使用 hf_embed，vLLM 不提供 embedding 功能
             texts,
             tokenizer=tokenizer,           # 复用分词器
             embed_model=embed_model,       # 复用模型
-        ),
+        )
     ),
 )
 
@@ -120,8 +160,8 @@ def load_txt_file(path: str):
     with open(path, "r", encoding="utf-8") as f:
         return f.read()
 # print("CPU核心数:", os.cpu_count())
-max_workers = 8
-BATCH_SIZE = 4  # 减小单批文档数，降低单次显存压力
+max_workers = 4
+BATCH_SIZE = 2  # 减小单批文档数，降低单次显存压力
 buffer = []
 with ThreadPoolExecutor(max_workers=max_workers) as executor:
     futures = [executor.submit(load_txt_file, path) for path in WEEK_LIST]
