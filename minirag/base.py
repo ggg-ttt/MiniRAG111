@@ -40,7 +40,7 @@ class QueryParam:
     # 是否以流式方式返回响应
     stream: bool = False
     # 检索时返回的top-k个项目数；在"local"模式下对应实体，在"global"模式下对应关系
-    top_k: int = int(os.getenv("TOP_K", "60"))
+    top_k: int = int(os.getenv("TOP_K", "30"))
     # # 检索的文档块数量（此行已注释掉）
     # top_n: int = 10
     # 文本单元（如原始块）允许的最大token数

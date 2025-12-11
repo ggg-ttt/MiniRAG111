@@ -85,7 +85,6 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
         "max_tokens": 2048,        # 最大输出长度（tokens）
         "temperature": 0.3,        # 温度参数（0.0-2.0，越高越随机）
         "top_p": 0.8,              # top-p 采样（0.0-1.0）
-        "top_k": 20,               # top-k 采样（可选）
         "frequency_penalty": 0.0,   # 频率惩罚（-2.0 到 2.0）
         "presence_penalty": 0.0,   # 存在惩罚（-2.0 到 2.0）
         "stop": None,              # 停止序列（列表或 None）
@@ -93,7 +92,15 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
     
     # 合并默认参数和用户传入的参数（用户参数优先）
     merged_params = {**default_params, **kwargs}
-    
+
+    # 过滤掉 OpenAI API 不支持的参数
+    # OpenAI API 支持的参数: max_tokens, temperature, top_p, frequency_penalty, presence_penalty, stop
+    supported_params = {
+        "max_tokens", "temperature", "top_p", "frequency_penalty",
+        "presence_penalty", "stop", "stream", "logprobs", "top_logprobs"
+    }
+    filtered_params = {k: v for k, v in merged_params.items() if k in supported_params}
+
     # 调用 openai_complete_if_cache，指定 base_url 连接到 vLLM server
     result = await openai_complete_if_cache(
         model=model_name,
@@ -102,7 +109,7 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
         history_messages=history_messages,
         base_url=VLLM_SERVER_BASE_URL,  # 指定 vLLM server 地址
         api_key=api_key,  # API key（vLLM server 不需要真实 key，但客户端要求必须设置）
-        **merged_params  # 传递合并后的参数
+        **filtered_params  # 传递过滤后的参数
     )
     
     # 如果需要关键词提取，处理 JSON 响应
@@ -157,8 +164,8 @@ def run_experiment(output_path, mode: str):
         existing_rows = []
         with open(output_path, mode="r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            fieldnames = reader.fieldnames or []
-            
+            fieldnames = list(reader.fieldnames or [])
+
             # 如果结果列不存在，添加到表头
             if result_column not in fieldnames:
                 fieldnames.append(result_column)
