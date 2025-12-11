@@ -43,8 +43,6 @@ from minirag.utils import (
 device = "cuda" if torch.cuda.is_available() else "cpu"  # 尽量使用 GPU，加速推理
 
 
-MS_MODEL_ROOT = "/data/gty/.cache/modelscope/hub/models"  # ModelScope 本地缓存根目录
-
 # 使用全局变量缓存模型实例，避免重复加载
 _vllm_model_cache = {}
 

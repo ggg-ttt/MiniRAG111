@@ -14,6 +14,7 @@ from minirag import MiniRAG, QueryParam
 from minirag.llm import (
     hf_model_complete,
     hf_embed,
+    openai_complete_if_cache
 )
 from minirag.utils import EmbeddingFunc
 from transformers import AutoModel, AutoTokenizer
@@ -27,8 +28,8 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出文件的路径，追加本次回答
-    parser.add_argument("--workingdir", type=str, default="./tests/Qwen")  # 工作目录
+    parser.add_argument("--outputpath", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm/Default_output.csv")  # 输出文件的路径，追加本次回答
+    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
@@ -64,12 +65,45 @@ print("USING WORKING DIR:", WORKING_DIR)
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
 
+# vLLM Server 配置
+VLLM_SERVER_BASE_URL = "http://0.0.0.0:8000/v1"  # vLLM server 地址
+VLLM_API_KEY = None  # 如果 vLLM server 设置了 API key，在这里填写
+
+# 创建包装函数，连接到 vLLM server
+async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs):
+    """通过 vLLM server 调用模型的包装函数"""
+    # 从 kwargs 中获取模型名称（MiniRAG 会通过 hashing_kv 传递）
+    keyword_extraction = kwargs.pop("keyword_extraction", None)
+    model_name = kwargs["hashing_kv"].global_config["llm_model_name"]
+    
+    # vLLM server 不需要真实的 API key，但 OpenAI 客户端要求必须设置
+    # 如果未设置，使用 dummy key
+    api_key = VLLM_API_KEY if VLLM_API_KEY else "dummy"
+    
+    # 调用 openai_complete_if_cache，指定 base_url 连接到 vLLM server
+    result = await openai_complete_if_cache(
+        model=model_name,
+        prompt=prompt,
+        system_prompt=system_prompt,
+        history_messages=history_messages,
+        base_url=VLLM_SERVER_BASE_URL,  # 指定 vLLM server 地址
+        api_key=api_key,  # API key（vLLM server 不需要真实 key，但客户端要求必须设置）
+        **kwargs
+    )
+    
+    # 如果需要关键词提取，处理 JSON 响应
+    if keyword_extraction:
+        from minirag.utils import locate_json_string_body_from_string
+        return locate_json_string_body_from_string(result)
+    
+    return result
+
+
 # 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=hf_model_complete,  # 指定LLM推理函数
-    # llm_model_func=gpt_4o_mini_complete,
-    llm_model_max_token_size=200,      # LLM最大token数
+    llm_model_func=vllm_server_complete,  # 指定LLM推理函数
+    llm_model_max_token_size=8192,      # LLM最大token数
     llm_model_name=LLM_MODEL,          # LLM模型名称
     embedding_func=EmbeddingFunc(
         embedding_dim=384,             # 嵌入维度
@@ -137,6 +171,5 @@ def run_experiment(output_path):
     print(f"Experiment data has been recorded in the file: {output_path}")
 
 # 主流程，直接运行实验
-# if __name__ == "__main__":
-
-run_experiment(OUTPUT_PATH)
+if __name__ == "__main__":
+    run_experiment(OUTPUT_PATH)
