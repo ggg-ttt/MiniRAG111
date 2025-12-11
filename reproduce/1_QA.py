@@ -80,6 +80,20 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
     # 如果未设置，使用 dummy key
     api_key = VLLM_API_KEY if VLLM_API_KEY else "dummy"
     
+    # 设置默认的生成参数（可以通过 kwargs 覆盖）
+    default_params = {
+        "max_tokens": 2048,        # 最大输出长度（tokens）
+        "temperature": 0.3,        # 温度参数（0.0-2.0，越高越随机）
+        "top_p": 0.8,              # top-p 采样（0.0-1.0）
+        "top_k": 20,               # top-k 采样（可选）
+        "frequency_penalty": 0.0,   # 频率惩罚（-2.0 到 2.0）
+        "presence_penalty": 0.0,   # 存在惩罚（-2.0 到 2.0）
+        "stop": None,              # 停止序列（列表或 None）
+    }
+    
+    # 合并默认参数和用户传入的参数（用户参数优先）
+    merged_params = {**default_params, **kwargs}
+    
     # 调用 openai_complete_if_cache，指定 base_url 连接到 vLLM server
     result = await openai_complete_if_cache(
         model=model_name,
@@ -88,7 +102,7 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
         history_messages=history_messages,
         base_url=VLLM_SERVER_BASE_URL,  # 指定 vLLM server 地址
         api_key=api_key,  # API key（vLLM server 不需要真实 key，但客户端要求必须设置）
-        **kwargs
+        **merged_params  # 传递合并后的参数
     )
     
     # 如果需要关键词提取，处理 JSON 响应
