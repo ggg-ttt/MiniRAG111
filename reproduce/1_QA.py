@@ -42,7 +42,7 @@ args = get_args()
 
 # 根据参数选择不同的LLM模型
 if args.model == "PHI":
-    LLM_MODEL = "microsoft/Phi-3.5-mini-instruct"
+    LLM_MODEL = "microsoft/Phi-4-mini-instruct"
 elif args.model == "GLM":
     LLM_MODEL = "THUDM/glm-edge-1.5b-chat"
 elif args.model == "MiniCPM":
@@ -126,50 +126,102 @@ with open(QUERY_PATH, mode="r", encoding="utf-8") as question_file:
         GA_LIST.append(row["Gold Answer"])
 
 # 运行实验并记录结果
-def run_experiment(output_path):
-    headers = ["Question", "Gold Answer", "naiveRAG"]  # CSV表头
+def run_experiment(output_path, mode: str):
+    if mode == "naive":
+        result_column = "naiveRAG"  # 结果列名
+    elif mode == "light":
+        result_column = "lightRAG"  # 结果列名
+    elif mode == "mini":
+        result_column = "miniRAG"  # 结果列名
+    else:
+        print("Invalid mode")
+        exit(1)
 
-    q_already = []
-    # 检查输出文件是否已存在，避免重复写入
+    # 检查输出文件是否已存在
     if os.path.exists(output_path):
-        with open(output_path, mode="r", encoding="utf-8") as question_file:
-            reader = csv.DictReader(question_file)
+        # 读取现有文件的所有行
+        existing_rows = []
+        with open(output_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            fieldnames = reader.fieldnames or []
+            
+            # 如果结果列不存在，添加到表头
+            if result_column not in fieldnames:
+                fieldnames.append(result_column)
+            
             for row in reader:
-                q_already.append(row["Question"])
-
-    row_count = len(q_already)
-    print("row_count", row_count)
-
-    # 以追加模式写入实验结果
-    with open(output_path, mode="a", newline="", encoding="utf-8") as log_file:
-        writer = csv.writer(log_file)
-        if row_count == 0:
-            writer.writerow(headers)  # 首次写入表头
-
-        # 遍历所有未处理的问题
-        for QUESTIONid in trange(row_count, len(QUESTION_LIST)):  #
-            QUESTION = QUESTION_LIST[QUESTIONid]
-            Gold_Answer = GA_LIST[QUESTIONid]
+                existing_rows.append(row)
+        
+        print(f"读取到 {len(existing_rows)} 行已存在的数据")
+        
+        # 对每行的 Question 使用 MiniRAG 进行问答
+        for idx, row in enumerate(trange(len(existing_rows), desc="处理问题")):
+            question = row["Question"]
+            
+            # 如果该问题已有结果且不为空，可以选择跳过或重新计算
+            # 这里选择重新计算（如果需要跳过，可以取消下面的注释）
+            # if result_column in row and row[result_column] and row[result_column].strip():
+            #     continue
+            
             print()
-            print("QUESTION", QUESTION)
-            print("Gold_Answer", Gold_Answer)
-
+            print(f"问题 {idx + 1}/{len(existing_rows)}: {question}")
+            
             try:
                 # 使用MiniRAG进行问答
                 minirag_answer = (
-                    rag.query(QUESTION, param=QueryParam(mode="naive"))
+                    rag.query(question, param=QueryParam(mode=mode))
                     .replace("\n", "")
                     .replace("\r", "")
                 )
             except Exception as e:
-                print("Error in minirag_answer", e)
+                print(f"Error in minirag_answer: {e}")
                 minirag_answer = "Error"
-
-            # 写入一行结果
-            writer.writerow([QUESTION, Gold_Answer, minirag_answer])
-
-    print(f"Experiment data has been recorded in the file: {output_path}")
+            
+            # 更新该行的结果列
+            row[result_column] = minirag_answer
+        
+        # 写回文件（覆盖模式）
+        with open(output_path, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(existing_rows)
+        
+        print(f"已将结果追加到文件: {output_path}")
+    else:
+        # 文件不存在，创建新文件
+        headers = ["Question", "Gold Answer", result_column]
+        
+        with open(output_path, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(headers)  # 写入表头
+            
+            # 遍历所有问题
+            for QUESTIONid in trange(len(QUESTION_LIST), desc="处理问题"):
+                QUESTION = QUESTION_LIST[QUESTIONid]
+                Gold_Answer = GA_LIST[QUESTIONid]
+                print()
+                print(f"问题 {QUESTIONid + 1}/{len(QUESTION_LIST)}: {QUESTION}")
+                print(f"标准答案: {Gold_Answer}")
+                
+                try:
+                    # 使用MiniRAG进行问答
+                    minirag_answer = (
+                        rag.query(QUESTION, param=QueryParam(mode=mode))
+                        .replace("\n", "")
+                        .replace("\r", "")
+                    )
+                except Exception as e:
+                    print(f"Error in minirag_answer: {e}")
+                    minirag_answer = "Error"
+                
+                # 写入一行结果
+                writer.writerow([QUESTION, Gold_Answer, minirag_answer])
+        
+        print(f"实验数据已记录到文件: {output_path}")
 
 # 主流程，直接运行实验
 if __name__ == "__main__":
-    run_experiment(OUTPUT_PATH)
+    # 可以通过命令行参数指定 mode，默认为 "naive"
+    import sys
+    mode = "naive"
+    run_experiment(OUTPUT_PATH, mode=mode)
