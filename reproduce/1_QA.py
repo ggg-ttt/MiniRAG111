@@ -158,8 +158,8 @@ def run_experiment(output_path, mode: str):
         print("Invalid mode")
         exit(1)
 
-    # 检查输出文件是否已存在
-    if os.path.exists(output_path):
+    # 检查输出文件是否已存在且有数据
+    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
         # 读取现有文件的所有行
         existing_rows = []
         with open(output_path, mode="r", encoding="utf-8") as f:
@@ -173,42 +173,76 @@ def run_experiment(output_path, mode: str):
             for row in reader:
                 existing_rows.append(row)
         
-        print(f"读取到 {len(existing_rows)} 行已存在的数据")
-        
-        # 对每行的 Question 使用 MiniRAG 进行问答
-        for idx in trange(len(existing_rows), desc="处理问题"):
-            row = existing_rows[idx]
-            question = row["Question"]
-            
-            # 如果该问题已有结果且不为空，可以选择跳过或重新计算
-            # 这里选择重新计算（如果需要跳过，可以取消下面的注释）
-            # if result_column in row and row[result_column] and row[result_column].strip():
-            #     continue
-            
-            print()
-            print(f"问题 {idx + 1}/{len(existing_rows)}: {question}")
-            
-            try:
-                # 使用MiniRAG进行问答
-                minirag_answer = (
-                    rag.query(question, param=QueryParam(mode=mode))
-                    .replace("\n", "")
-                    .replace("\r", "")
-                )
-            except Exception as e:
-                print(f"Error in minirag_answer: {e}")
-                minirag_answer = "Error"
-            
-            # 更新该行的结果列
-            row[result_column] = minirag_answer
-        
-        # 写回文件（覆盖模式）
-        with open(output_path, mode="w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(existing_rows)
-        
-        print(f"已将结果追加到文件: {output_path}")
+        # 如果文件存在但没有数据行，按新文件处理
+        if len(existing_rows) == 0:
+            print("输出文件存在但无数据，按新文件处理")
+            # 创建新文件
+            headers = ["Question", "Gold Answer", result_column]
+
+            with open(output_path, mode="w", newline="", encoding="utf-8") as f:
+                writer = csv.writer(f)
+                writer.writerow(headers)  # 写入表头
+
+                # 遍历所有问题
+                for QUESTIONid in trange(len(QUESTION_LIST), desc="处理问题"):
+                    QUESTION = QUESTION_LIST[QUESTIONid]
+                    Gold_Answer = GA_LIST[QUESTIONid]
+                    print()
+                    print(f"问题 {QUESTIONid + 1}/{len(QUESTION_LIST)}: {QUESTION}")
+                    print(f"标准答案: {Gold_Answer}")
+
+                    try:
+                        # 使用MiniRAG进行问答
+                        minirag_answer = (
+                            rag.query(QUESTION, param=QueryParam(mode=mode))
+                            .replace("\n", "")
+                            .replace("\r", "")
+                        )
+                    except Exception as e:
+                        print(f"Error in minirag_answer: {e}")
+                        minirag_answer = "Error"
+
+                    # 写入一行结果
+                    writer.writerow([QUESTION, Gold_Answer, minirag_answer])
+
+            print(f"实验数据已记录到文件: {output_path}")
+        else:
+            print(f"读取到 {len(existing_rows)} 行已存在的数据")
+
+            # 对每行的 Question 使用 MiniRAG 进行问答
+            for idx in trange(len(existing_rows), desc="处理问题"):
+                row = existing_rows[idx]
+                question = row["Question"]
+
+                # 如果该问题已有结果且不为空，可以选择跳过或重新计算
+                # 这里选择重新计算（如果需要跳过，可以取消下面的注释）
+                # if result_column in row and row[result_column] and row[result_column].strip():
+                #     continue
+
+                print()
+                print(f"问题 {idx + 1}/{len(existing_rows)}: {question}")
+
+                try:
+                    # 使用MiniRAG进行问答
+                    minirag_answer = (
+                        rag.query(question, param=QueryParam(mode=mode))
+                        .replace("\n", "")
+                        .replace("\r", "")
+                    )
+                except Exception as e:
+                    print(f"Error in minirag_answer: {e}")
+                    minirag_answer = "Error"
+
+                # 更新该行的结果列
+                row[result_column] = minirag_answer
+
+            # 写回文件（覆盖模式）
+            with open(output_path, mode="w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(existing_rows)
+
+            print(f"已将结果追加到文件: {output_path}")
     else:
         # 文件不存在，创建新文件
         headers = ["Question", "Gold Answer", result_column]
@@ -244,5 +278,5 @@ def run_experiment(output_path, mode: str):
 # 主流程，直接运行实验
 if __name__ == "__main__":
     import sys
-    mode = "light"
+    mode = "naive"
     run_experiment(OUTPUT_PATH, mode=mode)
