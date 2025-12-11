@@ -155,7 +155,8 @@ def run_experiment(output_path, mode: str):
         print(f"读取到 {len(existing_rows)} 行已存在的数据")
         
         # 对每行的 Question 使用 MiniRAG 进行问答
-        for idx, row in enumerate(trange(len(existing_rows), desc="处理问题")):
+        for idx in trange(len(existing_rows), desc="处理问题"):
+            row = existing_rows[idx]
             question = row["Question"]
             
             # 如果该问题已有结果且不为空，可以选择跳过或重新计算
@@ -223,5 +224,5 @@ def run_experiment(output_path, mode: str):
 if __name__ == "__main__":
     # 可以通过命令行参数指定 mode，默认为 "naive"
     import sys
-    mode = "naive"
+    mode = "light"
     run_experiment(OUTPUT_PATH, mode=mode)
