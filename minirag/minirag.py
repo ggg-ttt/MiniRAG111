@@ -45,7 +45,6 @@ from .utils import (
     clean_text,              # 文本清理
     get_content_summary,     # 内容摘要生成
     set_logger,              # 日志设置
-    logger,                  # 日志记录器（重复导入）
 )
 
 # 基础类和接口导入

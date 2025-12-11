@@ -31,15 +31,16 @@ logger = logging.getLogger("minirag")
 
 def set_logger(log_file: str):
     """
-    配置日志记录器，将日志输出到指定文件。
+    配置日志记录器，将日志输出到指定文件。默认是warning
+    error>warning>info>debug
     Args:
         log_file (str): 日志文件的路径。
     """
-    logger.setLevel(logging.DEBUG)  # 设置日志级别为DEBUG
+    # logger.setLevel(logging.DEBUG)  # 设置日志级别为DEBUG
 
     # 创建文件处理器
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.DEBUG)
+    file_handler.setLevel(logging.WARNING)
 
     # 创建并设置日志格式
     formatter = logging.Formatter(

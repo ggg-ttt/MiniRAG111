@@ -137,7 +137,8 @@ class NanoVectorDBStorage(BaseVectorStorage):
     async def query(self, query: str, top_k=5):
         embedding = await self.embedding_func([query])
         embedding = embedding[0]
-        logger.info(
+        # 过于冗长的检索参数日志改为 DEBUG，避免在默认 INFO 日志中刷屏
+        logger.debug(
             f"Query: {query}, top_k: {top_k}, cosine_better_than_threshold: {self.cosine_better_than_threshold}"
         )
         results = self._client.query(
