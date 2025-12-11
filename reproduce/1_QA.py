@@ -117,7 +117,7 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
 rag = MiniRAG(
     working_dir=WORKING_DIR,
     llm_model_func=vllm_server_complete,  # 指定LLM推理函数
-    llm_model_max_token_size=8192,      # LLM最大token数
+    llm_model_max_token_size=10240,      # LLM最大token数
     llm_model_name=LLM_MODEL,          # LLM模型名称
     embedding_func=EmbeddingFunc(
         embedding_dim=384,             # 嵌入维度
@@ -236,7 +236,6 @@ def run_experiment(output_path, mode: str):
 
 # 主流程，直接运行实验
 if __name__ == "__main__":
-    # 可以通过命令行参数指定 mode，默认为 "naive"
     import sys
     mode = "light"
     run_experiment(OUTPUT_PATH, mode=mode)

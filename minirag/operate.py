@@ -1608,20 +1608,7 @@ async def _build_local_query_context(
            - 列：id, content
            - id: 文本块的唯一数字标识
            - content: 文本块的实际内容
-    
-    性能特点:
-        - 高效的并发处理机制
-        - 基于向量相似度的精确检索
-        - 自动的数据去重和清洗
-        - 标准化的CSV输出格式
-        - 灵活的参数配置支持
-    
-    使用场景:
-        - 为LLM提供RAG问答的上下文
-        - 知识图谱的探索式查询
-        - 实体关系分析和可视化
-        - 文档内容的相关性分析
-        - 智能问答系统的知识库查询
+
     
     注意事项:
         - 检索质量依赖于实体向量数据库的建设
@@ -2711,7 +2698,14 @@ async def hybrid_query(
             query_param,
         )
 
-    context = combine_contexts(high_level_context, low_level_context)
+    tiktoken_model_name = global_config.get("tiktoken_model_name", "gpt-4o")
+
+    context = combine_contexts(
+        high_level_context,
+        low_level_context,
+        query_param,
+        tiktoken_model_name,
+    )
 
     if query_param.only_need_context:
         return context
@@ -2739,7 +2733,24 @@ async def hybrid_query(
     return response
 
 
-def combine_contexts(high_level_context, low_level_context):
+def truncate_str_by_tokens(text: str, max_tokens: int, model_name: str) -> str:
+    """
+    按token数截断字符串，返回截断后的字符串
+    """
+    if max_tokens <= 0:
+        return ""
+    toks = encode_string_by_tiktoken(text, model_name=model_name)
+    if len(toks) <= max_tokens:
+        return text
+    return decode_tokens_by_tiktoken(toks[:max_tokens], model_name=model_name)
+
+
+def combine_contexts(
+    high_level_context,
+    low_level_context,
+    query_param: QueryParam,
+    tiktoken_model_name: str,
+):
     """
     合并高级别和低级别查询的上下文。
     
@@ -2750,42 +2761,16 @@ def combine_contexts(high_level_context, low_level_context):
     Args:
         high_level_context: 高级别查询的上下文，来源于全局查询结果
         low_level_context: 低级别查询的上下文，来源于本地查询结果
+        query_param: 查询参数，包含各类上下文的token上限
+        tiktoken_model_name: 用于token计算的模型名称
         
     Returns:
         str: 合并后的标准化上下文字符串，包含实体、关系、来源三个部分
-        
-    合并策略:
-        - 实体合并：去重后按相关度排序，支持token限制截断
-        - 关系合并：提取关系三元组，去重后格式化输出
-        - 来源合并：合并文本块来源，去重后保证引用完整性
-        
-    数据结构:
-        返回格式：标准的CSV格式，包含三个主要部分
-        1. Entities: 实体列表 (entity, score, description)
-        2. Relationships: 关系列表 (source, target, relationship, weight)
-        3. Sources: 来源列表 (chunk_id, content_preview)
     """
 
     def extract_sections(context):
         """
         从上下文字符串中提取实体、关系和来源部分。
-        
-        使用正则表达式解析上下文字符串，提取结构化的CSV内容部分。
-        支持解析包含```csv标记的代码块格式，确保数据结构的完整性。
-        
-        Args:
-            context: 包含实体、关系、来源的上下文字符串
-            
-        Returns:
-            tuple: (entities_str, relationships_str, sources_str) 三元组
-                - entities_str: CSV格式的实体数据字符串
-                - relationships_str: CSV格式的关系数据字符串  
-                - sources_str: CSV格式的来源数据字符串
-                
-        正则解析:
-            - 实体部分：匹配-----Entities-----后的```csv内容
-            - 关系部分：匹配-----Relationships-----后的```csv内容
-            - 来源部分：匹配-----Sources-----后的```csv内容
         """
         entities_match = re.search(
             r"-----Entities-----\s*```csv\s*(.*?)\s*```", context, re.DOTALL
@@ -2804,7 +2789,6 @@ def combine_contexts(high_level_context, low_level_context):
         return entities, relationships, sources
 
     # 从两个上下文中提取结构化数据部分
-    # 处理高级别上下文：为None时使用空字符串，避免解析错误
     if high_level_context is None:
         warnings.warn(
             "High Level context is None. Return empty High entity/relationship/source"
@@ -2813,7 +2797,6 @@ def combine_contexts(high_level_context, low_level_context):
     else:
         hl_entities, hl_relationships, hl_sources = extract_sections(high_level_context)
 
-    # 处理低级别上下文：为None时使用空字符串，确保解析稳定性
     if low_level_context is None:
         warnings.warn(
             "Low Level context is None. Return empty Low entity/relationship/source"
@@ -2822,12 +2805,11 @@ def combine_contexts(high_level_context, low_level_context):
     else:
         ll_entities, ll_relationships, ll_sources = extract_sections(low_level_context)
 
-    # 合并和去重实体数据
-    # process_combine_contexts函数负责智能合并两个来源的实体数据
-    # 去除重复实体，保留高权重实体，并保持数据结构完整性
-    combined_entities = process_combine_contexts(hl_entities, ll_entities)
-    # 执行token限制截断，确保实体部分不超过2000个token
-    combined_entities = chunking_by_token_size(combined_entities, max_token_size=2000)
+    combined_entities = truncate_str_by_tokens(
+        process_combine_contexts(hl_entities, ll_entities),
+        2000,
+        tiktoken_model_name,
+    )
     
     # 合并和去重关系数据  
     # 关系数据合并时保持三元组结构完整性 (source, target, relationship)
@@ -2835,17 +2817,21 @@ def combine_contexts(high_level_context, low_level_context):
     combined_relationships = process_combine_contexts(
         hl_relationships, ll_relationships
     )
-    # 对关系数据执行token限制，保证在模型输入范围内
-    combined_relationships = chunking_by_token_size(
-        combined_relationships, max_token_size=2000
+    combined_relationships = truncate_str_by_tokens(
+        combined_relationships,
+        2000,
+        tiktoken_model_name,
     )
     
     # 合并和去重来源数据
     # 来源合并确保所有引用的文本块都被保留，避免信息丢失
     # 去重基于文本块ID，保证每个来源只出现一次
     combined_sources = process_combine_contexts(hl_sources, ll_sources)
-    # 对来源数据执行token限制，优化模型输入大小
-    combined_sources = chunking_by_token_size(combined_sources, max_token_size=2000)
+    combined_sources = truncate_str_by_tokens(
+        combined_sources,
+        2000,
+        tiktoken_model_name,
+    )
     
     # 格式化合并后的最终上下文
     # 采用标准的三部分结构，便于LLM理解和处理
