@@ -15,7 +15,13 @@ logging.getLogger("transformers").setLevel(logging.ERROR)
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 import csv
+import sys
 from tqdm import trange
+
+# 增加CSV字段大小限制，防止大字段写入时出现"field larger than field limit"错误
+# 设置为最大可能值 (sys.maxsize) 或一个较大的值如100MB
+max_field_size = sys.maxsize if sys.maxsize > 0 else 100 * 1024 * 1024  # 100MB
+csv.field_size_limit(max_field_size)
 from minirag import MiniRAG, QueryParam
 from minirag.llm import (
     hf_model_complete,
