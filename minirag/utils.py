@@ -40,7 +40,7 @@ def set_logger(log_file: str):
 
     # 创建文件处理器
     file_handler = logging.FileHandler(log_file)
-    file_handler.setLevel(logging.WARNING)
+    file_handler.setLevel(logging.INFO)
 
     # 创建并设置日志格式
     formatter = logging.Formatter(

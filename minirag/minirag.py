@@ -340,7 +340,7 @@ class MiniRAG:
     控制每次调用LLM时输入文本的最大长度
     """
     
-    llm_model_max_async: int = 16
+    llm_model_max_async: int = 8
     """LLM模型调用的最大异步并发数
     控制同时进行的LLM调用任务数，应考虑API限制
     """

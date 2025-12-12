@@ -4,6 +4,12 @@
 
 import sys
 import os
+import warnings
+import logging
+
+# 抑制transformers警告
+warnings.filterwarnings("ignore", category=UserWarning)
+logging.getLogger("transformers").setLevel(logging.ERROR)
 
 # 将上级目录加入sys.path，方便导入minirag包
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
