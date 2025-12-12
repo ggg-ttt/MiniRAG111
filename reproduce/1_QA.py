@@ -82,7 +82,7 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
     
     # 设置默认的生成参数（可以通过 kwargs 覆盖）
     default_params = {
-        "max_tokens": 2048,        # 最大输出长度（tokens）
+        "max_tokens": 200,        # 最大输出长度（tokens）
         "temperature": 0.3,        # 温度参数（0.0-2.0，越高越随机）
         "top_p": 0.8,              # top-p 采样（0.0-1.0）
         "frequency_penalty": 0.0,   # 频率惩罚（-2.0 到 2.0）
@@ -277,6 +277,6 @@ def run_experiment(output_path, mode: str):
 
 # 主流程，直接运行实验
 if __name__ == "__main__":
-    import sys
-    mode = "naive"
+
+    mode = "light"
     run_experiment(OUTPUT_PATH, mode=mode)
