@@ -36,7 +36,7 @@ import argparse
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm/Default_output_debug.csv")  # 输出文件的路径，追加本次回答
+    parser.add_argument("--outputpath", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm_debug/Default_output_debug.csv")  # 输出文件的路径，追加本次回答
     parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm_debug")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")  # 数据目录
     parser.add_argument(
@@ -161,7 +161,7 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
 rag = MiniRAG(
     working_dir=WORKING_DIR,
     llm_model_func=vllm_server_complete,  # 指定LLM推理函数
-    llm_model_max_token_size=10240,      # LLM最大token数
+    llm_model_max_token_size=8192,      # LLM最大token数
     llm_model_name=LLM_MODEL,          # LLM模型名称
     embedding_func=EmbeddingFunc(
         embedding_dim=384,             # 嵌入维度
@@ -260,21 +260,30 @@ def run_experiment(output_path, mode: str):
         print(f"{'='*60}")
 
         if need_regenerate:
-            try:
-                # 使用MiniRAG进行问答
-                minirag_answer = (
-                    rag.query(QUESTION, param=QueryParam(mode=mode))
-                    .replace("\n", "")
-                    .replace("\r", "")
+            # 为防止单个问题卡死，设置超时（秒）
+            TIMEOUT_SEC = 120
+            from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeout
+
+            with ThreadPoolExecutor(max_workers=1) as ex:
+                future = ex.submit(
+                    lambda: rag.query(QUESTION, param=QueryParam(mode=mode))
                 )
-                error_info = ""
-                print(f"\n[SUCCESS] 成功生成答案")
-            except Exception as e:
-                print(f"\n[ERROR] Error in minirag_answer: {e}")
-                print(f"[ERROR] Error type: {type(e).__name__}")
-                traceback.print_exc()
-                minirag_answer = "Error"
-                error_info = f"{type(e).__name__}: {str(e)}"
+                try:
+                    minirag_answer = future.result(timeout=TIMEOUT_SEC)
+                    minirag_answer = minirag_answer.replace("\n", "").replace("\r", "")
+                    error_info = ""
+                    print(f"\n[SUCCESS] 成功生成答案")
+                except FuturesTimeout:
+                    print(f"\n[ERROR] 超时（>{TIMEOUT_SEC}s）跳过该问题")
+                    future.cancel()
+                    minirag_answer = "Error"
+                    error_info = f"Timeout(>{TIMEOUT_SEC}s)"
+                except Exception as e:
+                    print(f"\n[ERROR] Error in minirag_answer: {e}")
+                    print(f"[ERROR] Error type: {type(e).__name__}")
+                    traceback.print_exc()
+                    minirag_answer = "Error"
+                    error_info = f"{type(e).__name__}: {str(e)}"
 
             # API调用延时（如果成功）
             if minirag_answer != "Error" and API_DELAY > 0:
