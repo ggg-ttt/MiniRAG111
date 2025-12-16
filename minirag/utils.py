@@ -280,6 +280,8 @@ def list_of_list_to_csv(data: List[List[str]]) -> str:
 def csv_string_to_list(csv_string: str) -> List[List[str]]:
     """将CSV格式的字符串转换为二维列表。"""
     output = io.StringIO(csv_string)
+    # 增加字段大小限制到1GB以处理大型字段
+    csv.field_size_limit(1024 * 1024 * 1024)  # 1GB
     reader = csv.reader(output)
     return [row for row in reader]
 

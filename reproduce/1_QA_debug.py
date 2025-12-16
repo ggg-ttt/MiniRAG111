@@ -187,173 +187,178 @@ with open(QUERY_PATH, mode="r", encoding="utf-8") as question_file:
 def run_experiment(output_path, mode: str):
     if mode == "naive":
         result_column = "naiveRAG"  # 结果列名
+        mode_suffix = "naive"
     elif mode == "light":
         result_column = "lightRAG"  # 结果列名
+        mode_suffix = "light"
     elif mode == "mini":
         result_column = "miniRAG"  # 结果列名
+        mode_suffix = "mini"
     else:
         print("Invalid mode")
         exit(1)
 
-    # 检查输出文件是否已存在且有数据
-    if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
-        # 读取现有文件的所有行
-        existing_rows = []
-        with open(output_path, mode="r", encoding="utf-8") as f:
+    # 为不同模式创建独立的输出文件
+    base_name = os.path.splitext(output_path)[0]  # 文件名不带扩展名
+    extension = os.path.splitext(output_path)[1]  # 文件扩展名（如.csv）
+    mode_output_path = f"{base_name}_{mode_suffix}{extension}"
+
+    print(f"使用 {mode} 模式，结果将保存到: {mode_output_path}")
+
+    # 检查输出文件是否已存在
+    existing_data = []
+    file_exists = os.path.exists(mode_output_path) and os.path.getsize(mode_output_path) > 0
+
+    if file_exists:
+        # 读取现有数据
+        print(f"检测到现有文件: {mode_output_path}")
+        with open(mode_output_path, mode="r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
-            fieldnames = list(reader.fieldnames or [])
+            existing_data = list(reader)
+        print(f"读取到 {len(existing_data)} 行现有数据")
 
-            # 如果结果列不存在，添加到表头
-            if result_column not in fieldnames:
-                fieldnames.append(result_column)
+    # 准备所有问题的数据
+    headers = ["Question", "Gold Answer", result_column, "Error_Info"]
+    all_rows = []
 
-            for row in reader:
-                existing_rows.append(row)
+    # 遍历所有问题
+    for QUESTIONid in trange(len(QUESTION_LIST), desc="处理问题"):
+        QUESTION = QUESTION_LIST[QUESTIONid]
+        Gold_Answer = GA_LIST[QUESTIONid]
 
-        # 如果文件存在但没有数据行，按新文件处理
-        if len(existing_rows) == 0:
-            print("输出文件存在但无数据，按新文件处理")
-            # 创建新文件
-            headers = ["Question", "Gold Answer", result_column, "Error_Info"]
+        # 检查是否已有该问题的数据
+        existing_row = None
+        if existing_data:
+            for row in existing_data:
+                if row["Question"] == QUESTION and row["Gold Answer"] == Gold_Answer:
+                    existing_row = row
+                    break
 
-            with open(output_path, mode="w", newline="", encoding="utf-8") as f:
-                writer = csv.writer(f)
-                writer.writerow(headers)  # 写入表头
-
-                # 遍历所有问题
-                for QUESTIONid in trange(len(QUESTION_LIST), desc="处理问题"):
-                    QUESTION = QUESTION_LIST[QUESTIONid]
-                    Gold_Answer = GA_LIST[QUESTIONid]
-                    print()
-                    print(f"\n{'='*60}")
-                    print(f"问题 {QUESTIONid + 1}/{len(QUESTION_LIST)}: {QUESTION}")
-                    print(f"标准答案: {Gold_Answer}")
-                    print(f"{'='*60}")
-
-                    try:
-                        # 使用MiniRAG进行问答
-                        minirag_answer = (
-                            rag.query(QUESTION, param=QueryParam(mode=mode))
-                            .replace("\n", "")
-                            .replace("\r", "")
-                        )
-                        error_info = ""
-                    except Exception as e:
-                        print(f"\n[ERROR] Error in minirag_answer: {e}")
-                        print(f"[ERROR] Error type: {type(e).__name__}")
-                        traceback.print_exc()
-                        minirag_answer = "Error"
-                        error_info = f"{type(e).__name__}: {str(e)}"
-
-                    # API调用延时（如果成功）
-                    if minirag_answer != "Error" and API_DELAY > 0:
-                        print(f"\n[DELAY] Waiting {API_DELAY} seconds before next request...")
-                        time.sleep(API_DELAY)
-
-                    # 写入一行结果
-                    writer.writerow([QUESTION, Gold_Answer, minirag_answer, error_info])
-
-            print(f"\n实验数据已记录到文件: {output_path}")
-        else:
-            print(f"读取到 {len(existing_rows)} 行已存在的数据")
-
-            # 对每行的 Question 使用 MiniRAG 进行问答
-            for idx in trange(len(existing_rows), desc="处理问题"):
-                row = existing_rows[idx]
-                question = row["Question"]
-
-                # 如果该问题已有结果且不为空且不是Error，可以跳过
-                # 否则（不存在、为空、为Error），则重新计算
-                if (result_column in row and row[result_column] and 
-                    row[result_column].strip() and row[result_column] != "Error"):
-                    print(f"问题 {idx + 1}/{len(existing_rows)} 已有答案，跳过")
+        # 判断是否需要重新生成答案
+        need_regenerate = False
+        if existing_row:
+            if result_column in existing_row:
+                existing_answer = existing_row[result_column].strip()
+                if existing_answer == "Error" or not existing_answer:
+                    need_regenerate = True
+                    print(f"\n问题 {QUESTIONid + 1} 现有答案为 '{existing_answer}'，需要重新生成")
+                else:
+                    print(f"\n问题 {QUESTIONid + 1} 已有有效答案，跳过")
+                    all_rows.append(existing_row)
                     continue
+            else:
+                need_regenerate = True
+                print(f"\n问题 {QUESTIONid + 1} 缺少 {result_column} 列，需要生成答案")
+        else:
+            need_regenerate = True
+            print(f"\n问题 {QUESTIONid + 1} 无现有数据，需要生成答案")
 
-                print()
-                print(f"\n{'='*60}")
-                print(f"问题 {idx + 1}/{len(existing_rows)}: {question}")
-                print(f"{'='*60}")
+        print()
+        print(f"{'='*60}")
+        print(f"问题 {QUESTIONid + 1}/{len(QUESTION_LIST)}: {QUESTION}")
+        print(f"标准答案: {Gold_Answer}")
+        print(f"{'='*60}")
 
-                try:
-                    # 使用MiniRAG进行问答
-                    minirag_answer = (
-                        rag.query(question, param=QueryParam(mode=mode))
-                        .replace("\n", "")
-                        .replace("\r", "")
-                    )
-                    error_info = ""
-                except Exception as e:
-                    print(f"\n[ERROR] Error in minirag_answer: {e}")
-                    print(f"[ERROR] Error type: {type(e).__name__}")
-                    traceback.print_exc()
-                    minirag_answer = "Error"
-                    error_info = f"{type(e).__name__}: {str(e)}"
+        if need_regenerate:
+            try:
+                # 使用MiniRAG进行问答
+                minirag_answer = (
+                    rag.query(QUESTION, param=QueryParam(mode=mode))
+                    .replace("\n", "")
+                    .replace("\r", "")
+                )
+                error_info = ""
+                print(f"\n[SUCCESS] 成功生成答案")
+            except Exception as e:
+                print(f"\n[ERROR] Error in minirag_answer: {e}")
+                print(f"[ERROR] Error type: {type(e).__name__}")
+                traceback.print_exc()
+                minirag_answer = "Error"
+                error_info = f"{type(e).__name__}: {str(e)}"
 
-                # 更新该行的结果列
-                row[result_column] = minirag_answer
-                if "Error_Info" not in row:
-                    row["Error_Info"] = ""
-                if minirag_answer == "Error":
-                    row["Error_Info"] = error_info
+            # API调用延时（如果成功）
+            if minirag_answer != "Error" and API_DELAY > 0:
+                print(f"\n[DELAY] Waiting {API_DELAY} seconds before next request...")
+                time.sleep(API_DELAY)
+        else:
+            # 使用现有数据
+            minirag_answer = existing_row[result_column] if existing_row else "Error"
+            error_info = existing_row.get("Error_Info", "")
 
-                # API调用延时（如果成功）
-                if minirag_answer != "Error" and API_DELAY > 0:
-                    print(f"\n[DELAY] Waiting {API_DELAY} seconds before next request...")
-                    time.sleep(API_DELAY)
+        # 创建或更新行数据
+        if existing_row:
+            existing_row[result_column] = minirag_answer
+            existing_row["Error_Info"] = error_info if minirag_answer == "Error" else ""
+            all_rows.append(existing_row)
+        else:
+            new_row = {
+                "Question": QUESTION,
+                "Gold Answer": Gold_Answer,
+                result_column: minirag_answer,
+                "Error_Info": error_info if minirag_answer == "Error" else ""
+            }
+            all_rows.append(new_row)
 
-            # 写回文件（覆盖模式）
-            with open(output_path, mode="w", newline="", encoding="utf-8") as f:
-                writer = csv.DictWriter(f, fieldnames=fieldnames + ["Error_Info"])
-                writer.writeheader()
-                writer.writerows(existing_rows)
+    # 写入所有数据到文件（覆盖模式）
+    with open(mode_output_path, mode="w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=headers)
+        writer.writeheader()
+        writer.writerows(all_rows)
 
-            print(f"\n已将结果追加到文件: {output_path}")
+    print(f"\n{mode} 模式的实验数据已记录到文件: {mode_output_path}")
+
+    # 统计错误数量
+    error_count = sum(1 for row in all_rows if row[result_column] == "Error")
+    print(f"错误数量: {error_count}/{len(all_rows)}")
+
+    return mode_output_path
+
+
+def merge_answer(output_path, mode: str):
+    # 合并不同模式的答案到一个文件
+    base_name = os.path.splitext(output_path)[0]  # 文件名不带扩展名
+    extension = os.path.splitext(output_path)[1]  # 文件扩展名（如.csv）
+    merged_output_path = f"{args.model}_merged{extension}"
+
+    print(f"\n正在合并答案到文件: {merged_output_path}")
+
+    # 读取所有模式的答案
+    mode_suffixes = ["naive", "light", "mini"]
+    all_rows = []
+
+    for mode_suffix in mode_suffixes:
+        mode_output_path = f"{base_name}_{mode_suffix}{extension}"
+        if not os.path.exists(mode_output_path):
+            print(f"警告: 未找到文件 {mode_output_path}，跳过")
+            continue
+
+        with open(mode_output_path, mode="r", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                # 查找是否已有该问题的数据
+                existing_row = next((r for r in all_rows if r["Question"] == row["Question"]), None)
+                if existing_row:
+                    # 更新现有行
+                    existing_row.update(row)
+                else:
+                    # 添加新行
+                    all_rows.append(row)
+
+    # 写入合并后的数据到文件
+    if all_rows:
+        headers = all_rows[0].keys()
+        with open(merged_output_path, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=headers)
+            writer.writeheader()
+            writer.writerows(all_rows)
+
+        print(f"合并完成，结果保存到: {merged_output_path}")
     else:
-        # 文件不存在，创建新文件
-        headers = ["Question", "Gold Answer", result_column, "Error_Info"]
-
-        with open(output_path, mode="w", newline="", encoding="utf-8") as f:
-            writer = csv.writer(f)
-            writer.writerow(headers)  # 写入表头
-
-            # 遍历所有问题
-            for QUESTIONid in trange(len(QUESTION_LIST), desc="处理问题"):
-                QUESTION = QUESTION_LIST[QUESTIONid]
-                Gold_Answer = GA_LIST[QUESTIONid]
-                print()
-                print(f"\n{'='*60}")
-                print(f"问题 {QUESTIONid + 1}/{len(QUESTION_LIST)}: {QUESTION}")
-                print(f"标准答案: {Gold_Answer}")
-                print(f"{'='*60}")
-
-                try:
-                    # 使用MiniRAG进行问答
-                    minirag_answer = (
-                        rag.query(QUESTION, param=QueryParam(mode=mode))
-                        .replace("\n", "")
-                        .replace("\r", "")
-                    )
-                    error_info = ""
-                except Exception as e:
-                    print(f"\n[ERROR] Error in minirag_answer: {e}")
-                    print(f"[ERROR] Error type: {type(e).__name__}")
-                    traceback.print_exc()
-                    minirag_answer = "Error"
-                    error_info = f"{type(e).__name__}: {str(e)}"
-
-                # API调用延时（如果成功）
-                if minirag_answer != "Error" and API_DELAY > 0:
-                    print(f"\n[DELAY] Waiting {API_DELAY} seconds before next request...")
-                    time.sleep(API_DELAY)
-
-                # 写入一行结果
-                writer.writerow([QUESTION, Gold_Answer, minirag_answer, error_info])
-
-        print(f"\n实验数据已记录到文件: {output_path}")
+        print("没有数据可供合并")
 
 # 主流程，直接运行实验
 if __name__ == "__main__":
-    mode = "light"
+    mode = "mini"
 
     # 统计错误信息
     error_count = 0
@@ -362,14 +367,17 @@ if __name__ == "__main__":
     print(f"\n开始运行实验，共 {total_count} 个问题")
     print(f"API调用延时设置为: {API_DELAY} 秒")
 
-    run_experiment(OUTPUT_PATH, mode=mode)
+    # 运行实验并获取模式特定的输出路径
+    actual_output_path = run_experiment(OUTPUT_PATH, mode=mode)
 
     # 读取结果并统计错误率
-    if os.path.exists(OUTPUT_PATH):
-        with open(OUTPUT_PATH, mode="r", encoding="utf-8") as f:
+    if os.path.exists(actual_output_path):
+        with open(actual_output_path, mode="r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             for row in reader:
-                if "lightRAG" in row and row["lightRAG"] == "Error":
+                # 根据当前模式检查对应的错误列
+                result_column = f"{mode}RAG"
+                if result_column in row and row[result_column] == "Error":
                     error_count += 1
 
         error_rate = (error_count / total_count) * 100
@@ -378,5 +386,5 @@ if __name__ == "__main__":
         print(f"总问题数: {total_count}")
         print(f"错误数: {error_count}")
         print(f"错误率: {error_rate:.2f}%")
-        print(f"结果文件: {OUTPUT_PATH}")
+        print(f"结果文件: {actual_output_path}")
         print(f"{'='*60}")
