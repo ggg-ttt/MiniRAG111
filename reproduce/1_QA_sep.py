@@ -8,6 +8,7 @@ import warnings
 import logging
 import time
 import traceback
+import asyncio  # 添加asyncio导入
 
 # 抑制transformers警告
 warnings.filterwarnings("ignore", category=UserWarning)
@@ -43,6 +44,13 @@ def get_args():
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
     parser.add_argument("--delay", type=float, default=2.0)  # API调用之间的延时（秒）
+    parser.add_argument(
+        "--mode",
+        type=str,
+        default="mini",
+        choices=["naive", "light", "mini"],
+        help="RAG 模式：naive / light / mini（默认: mini）",
+    )
     args = parser.parse_args()
     return args
 
@@ -260,21 +268,15 @@ def run_experiment(output_path, mode: str):
         print(f"{'='*60}")
 
         if need_regenerate:
-            print(f"\n[DEBUG] 开始执行 rag.query")
-            start_time = time.time()
-            
+            # 直接调用 rag.query，不再进行超时控制
             try:
                 minirag_answer = rag.query(QUESTION, param=QueryParam(mode=mode))
                 minirag_answer = minirag_answer.replace("\n", "").replace("\r", "")
                 error_info = ""
-                elapsed = time.time() - start_time
-                print(f"\n[SUCCESS] 成功生成答案，耗时: {elapsed:.2f}s")
-                            
+                print(f"\n[SUCCESS] 成功生成答案")
             except Exception as e:
-                elapsed = time.time() - start_time
                 print(f"\n[ERROR] Error in minirag_answer: {e}")
                 print(f"[ERROR] Error type: {type(e).__name__}")
-                print(f"[ERROR] 耗时: {elapsed:.2f}s")
                 traceback.print_exc()
                 minirag_answer = "Error"
                 error_info = f"{type(e).__name__}: {str(e)}"
@@ -359,15 +361,16 @@ def merge_answer(output_path, mode: str):
     else:
         print("没有数据可供合并")
 
-# 主流程，直接运行实验
+# 主流程，只跑一个模式（通过命令行 --mode 指定）
 if __name__ == "__main__":
-    mode = "light"
+    mode = args.mode
 
     # 统计错误信息
     error_count = 0
     total_count = len(QUESTION_LIST)
 
-    print(f"\n开始运行实验，共 {total_count} 个问题")
+    print(f"\n当前模式: {mode}")
+    print(f"共 {total_count} 个问题")
     print(f"API调用延时设置为: {API_DELAY} 秒")
 
     # 运行实验并获取模式特定的输出路径
@@ -380,12 +383,12 @@ if __name__ == "__main__":
             for row in reader:
                 # 根据当前模式检查对应的错误列
                 result_column = f"{mode}RAG"
-                if result_column in row and row[result_column] == "Error":
+                if result_column in row and row.get(result_column, "") == "Error":
                     error_count += 1
 
         error_rate = (error_count / total_count) * 100
         print(f"\n{'='*60}")
-        print(f"实验完成！")
+        print(f"实验完成！（模式: {mode}）")
         print(f"总问题数: {total_count}")
         print(f"错误数: {error_count}")
         print(f"错误率: {error_rate:.2f}%")
