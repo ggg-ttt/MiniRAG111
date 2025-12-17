@@ -6,6 +6,7 @@ import asyncio
 import json
 import re
 from typing import Union
+import time
 from collections import Counter, defaultdict
 import warnings
 import json_repair
@@ -40,68 +41,7 @@ from .prompt import GRAPH_FIELD_SEP, PROMPTS  # 分隔符与提示词
 def chunking_by_token_size(
     content: str, overlap_token_size=128, max_token_size=1024, tiktoken_model="gpt-4o"
 ):
-    """
-    按token数对长文本进行智能分块，支持重叠窗口机制
     
-    该函数是MiniRAG文档处理的核心组件之一，负责将长文本按照指定的token限制进行切分。
-    通过重叠窗口机制，确保相邻文本块之间的语义连续性，避免重要信息被截断。
-    分块结果包含每个块的基本信息，为后续的实体抽取和向量化提供基础。
-    
-    Args:
-        content (str): 待分块的原始文本内容，支持任意长度的中文或英文文本
-        
-        overlap_token_size (int, optional): 文本块之间的重叠token数量，默认128
-            - 作用：确保相邻块之间的语义连续性，避免关键信息被分割
-            - 建议：对于需要高召回率的场景，可适当增加重叠token数量
-            - 注意：重叠越多，存储和计算成本越高
-            
-        max_token_size (int, optional): 每个文本块的最大token数量，默认1024
-            - 作用：限制单次处理的文本长度，避免超出LLM输入限制
-            - 建议：根据下游任务的token限制和性能要求调整
-            - 注意：过小的分块可能导致语义不完整
-            
-        tiktoken_model (str, optional): 用于token计算的模型名称，默认"gpt-4o"
-            - 作用：确保token计算的准确性和一致性
-            - 支持：gpt-4、gpt-3.5-turbo等OpenAI模型
-            - 注意：不同模型的tokenization方式可能略有差异
-    
-    Returns:
-        list[dict]: 分块结果列表，每个元素包含以下字段：
-            - tokens (int): 当前块的token数量
-            - content (str): 分块后的文本内容（已去除首尾空格）
-            - chunk_order_index (int): 当前块在原文本中的顺序索引（从0开始）
-    
-    算法逻辑:
-        1. 使用指定的tiktoken模型对输入文本进行tokenization
-        2. 按照 max_token_size - overlap_token_size 的步长遍历tokens
-        3. 对每个窗口内的tokens进行截取和decode
-        4. 计算实际的token数量并构建结果字典
-    
-    使用示例:
-        >>> # 基本用法
-        >>> content = "这是一个很长的文档内容..."
-        >>> chunks = chunking_by_token_size(content)
-        >>> print(f"共分块 {len(chunks)} 个")
-        
-        >>> # 自定义参数
-        >>> chunks = chunking_by_token_size(
-        ...     content, 
-        ...     overlap_token_size=256, 
-        ...     max_token_size=2048,
-        ...     tiktoken_model="gpt-3.5-turbo"
-        ... )
-        
-        >>> # 处理分块结果
-        >>> for chunk in chunks:
-        ...     print(f"块 {chunk['chunk_order_index']}: {chunk['tokens']} tokens")
-        ...     print(f"内容: {chunk['content'][:100]}...")
-    
-    注意事项:
-        - 函数会自动处理文本的边界条件，最后一块可能不足max_token_size
-        - 重叠区域可能导致重复计算，但对保持语义连续性很重要
-        - token计算基于指定的模型，不同模型可能有不同的计算结果
-        - 对于极短文本，可能只返回一个包含全部内容的块
-    """
     tokens = encode_string_by_tiktoken(content, model_name=tiktoken_model)
     results = []
     for index, start in enumerate(
@@ -160,23 +100,7 @@ async def _handle_entity_relation_summary(
         3. 检查token数量是否超过预设限制
         4. 如果未超限，直接返回原始描述
         5. 如果超限，调用LLM进行智能摘要（当前实现中此部分被注释）
-        
-    当前状态:
-        - 函数已实现token超限检查逻辑
-        - 实际的LLM摘要调用部分暂时被注释
-        - 目前当token未超限时直接返回原始描述
-        
-    使用场景:
-        - 实体抽取后对长描述进行压缩存储
-        - 关系抽取中对关系描述进行长度控制
-        - 知识图谱构建中的信息压缩优化
-        - 减少存储空间和提升检索效率
-        
-    注意事项:
-        - 摘要过程需要权衡信息完整性和长度限制
-        - 不同类型的实体可能需要不同的摘要策略
-        - 摘要质量直接影响后续检索和推理的效果
-        - 建议在实际使用时启用LLM摘要功能以获得更好效果
+
     """
     tiktoken_model_name = global_config["tiktoken_model_name"]
     summary_max_tokens = global_config["entity_summary_to_max_tokens"]
@@ -237,19 +161,7 @@ async def _handle_single_entity_extraction(
         - 非实体类型记录（不是'"entity"'开头）：返回None
         - 空实体名称或无效名称：返回None
         - 解析过程中的任何异常都会被捕获并返回None
-    
-    使用场景:
-        - 从LLM输出中解析实体信息
-        - 实体抽取管道的标准化处理环节
-        - 批量实体处理的并行处理单元
-        - 实体信息的质量控制和验证
-    
-    注意事项:
-        - 函数是异步的，支持并发处理
-        - 输入的record_attributes必须按预期格式组织
-        - 实体名称和类型的清洗会影响后续匹配和合并
-        - source_id的完整性对溯源功能至关重要
-        - 返回的None值需要在上层调用中妥善处理
+
     """
     if len(record_attributes) < 4 or record_attributes[0] != '"entity"':
         return None
@@ -335,22 +247,6 @@ async def _handle_single_relationship_extraction(
         - 非关系类型记录（不是'"relationship"'开头）：返回None
         - 权重转换失败：使用默认值1.0（不返回None）
         - 解析过程中的其他异常会被捕获并返回None
-    
-    使用场景:
-        - 从LLM输出中解析关系信息
-        - 关系抽取管道的标准化处理环节
-        - 批量关系处理的并行处理单元
-        - 知识图谱构建中的关系数据处理
-        - 关系质量控制和验证
-    
-    注意事项:
-        - 函数是异步的，支持并发处理
-        - 输入的record_attributes必须按预期格式组织
-        - 实体ID的大小写一致性对后续处理很重要
-        - source_id的完整性对关系溯源功能至关重要
-        - 权重信息的准确性影响关系排序和筛选
-        - 返回的None值需要在上层调用中妥善处理
-        - 关系描述和关键词是后续相似度计算的重要依据
     """
     if len(record_attributes) < 5 or record_attributes[0] != '"relationship"':
         return None
@@ -3275,6 +3171,10 @@ async def _build_mini_query_context(
     Returns:
         str: 上下文字符串
     """
+    # 记录整体开始时间
+    _total_start_time = time.time()
+    _timing_stats = {}
+    
     # 1初始化重要实体列表，用于存储后续处理中的关键实体
     imp_ents = []
     # 初始化查询节点列表，存储从实体名称向量数据库查询的结果
@@ -3282,6 +3182,8 @@ async def _build_mini_query_context(
     # 初始化实体查询结果字典，键为原始实体，值为对应的匹配实体列表
     ent_from_query_dict = {}
 
+    # 步骤1: 实体名称向量检索
+    _step1_start = time.time()
     # 遍历查询中识别的每个实体
     for ent in ent_from_query:
         # 初始化实体对应的匹配结果列表
@@ -3303,6 +3205,10 @@ async def _build_mini_query_context(
         # 提取实体名称并保存到字典中
         ent_from_query_dict[ent] = [e["entity_name"] for e in results_node]
 
+    _timing_stats['1.实体名称向量检索'] = time.time() - _step1_start
+    logger.info(f"[Mini Query 耗时] 步骤1-实体名称向量检索: {_timing_stats['1.实体名称向量检索']:.3f}秒")
+
+    
     # 初始化候选推理路径字典
     candidate_reasoning_path = {}
 
@@ -3333,14 +3239,22 @@ async def _build_mini_query_context(
         }
     
     # 2为每个候选实体查找k跳邻居路径
-    for key in candidate_reasoning_path.keys():
+    _step2_start = time.time()
+    logger.info(f"[Mini Query] 开始查找 {len(candidate_reasoning_path)} 个实体的2跳邻居路径...")
+    for idx, key in enumerate(candidate_reasoning_path.keys()):
         # 获取实体的2跳邻居路径信息（candidate_reasoning_path返回从该节点出发的所有 2 跳路径（元组形式，如 (A, B, C)））
+        if idx % 5 == 0:  # 每5个实体输出一次进度
+            logger.info(f"[Mini Query] 正在处理实体 {idx+1}/{len(candidate_reasoning_path)}: {key}")
         candidate_reasoning_path[key][
             "Path"
         ] = await knowledge_graph_inst.get_neighbors_within_k_hops(key, 2)
         # 将实体添加到重要实体列表
         imp_ents.append(key)
+    _timing_stats['2.K跳邻居路径查找'] = time.time() - _step2_start
+    logger.info(f"[Mini Query 耗时] 步骤2-K跳邻居路径查找: {_timing_stats['2.K跳邻居路径查找']:.3f}秒")
+    
     #3. 路径筛选与优化
+    _step3_start = time.time()
     # 过滤出路径长度小于1的短路径条目（没有邻居节点的实体）
     short_path_entries = {
         name: entry
@@ -3367,7 +3281,11 @@ async def _build_mini_query_context(
     # 合并长路径和高分短路径，形成新的候选推理路径
     candidate_reasoning_path = {**long_path_entries, **top_short_path_dict}
 
+    _timing_stats['3.路径筛选与优化'] = time.time() - _step3_start
+    logger.info(f"[Mini Query 耗时] 步骤3-路径筛选与优化: {_timing_stats['3.路径筛选与优化']:.3f}秒")
+    
     # 4. 获取可能的答案节点并进行路径评分
+    _step4_start = time.time()
     # 根据类型关键词获取相关节点
     node_datas_from_type = await knowledge_graph_inst.get_node_from_types(
         type_keywords
@@ -3382,7 +3300,11 @@ async def _build_mini_query_context(
         candidate_reasoning_path, maybe_answer_list
     )
 
+    _timing_stats['4.路径评分计算'] = time.time() - _step4_start
+    logger.info(f"[Mini Query 耗时] 步骤4-路径评分计算: {_timing_stats['4.路径评分计算']:.3f}秒")
+    
     # 5. 获取相关关系并进行边投票优化（关键步骤2）
+    _step5_start = time.time()
     # 在关系向量数据库中查询与原始查询相关的关系
     results_edge = await relationships_vdb.query(
         originalquery, top_k=len(ent_from_query) * query_param.top_k
@@ -3401,8 +3323,13 @@ async def _build_mini_query_context(
     scored_edged_reasoning_path, pairs_append = edge_vote_path(
         scored_reasoning_path, goodedge
     )
+    _timing_stats['5.边投票优化'] = time.time() - _step5_start
+    logger.info(f"[Mini Query 耗时] 步骤5-边投票优化: {_timing_stats['5.边投票优化']:.3f}秒")
+    
     # 6. 路径转文本块
+    _step6_start = time.time()
     # 将推理路径转换为相关文本块，添加更多上下文信息
+    logger.info(f"[Mini Query] 开始路径转文本块，共 {len(scored_edged_reasoning_path)} 个实体路径...")
     scored_edged_reasoning_path = await path2chunk(
         scored_edged_reasoning_path,  # 优化后的推理路径
         knowledge_graph_inst,  # 知识图谱实例
@@ -3410,8 +3337,11 @@ async def _build_mini_query_context(
         originalquery,  # 原始查询
         max_chunks=3,  # 每个路径最多关联3个文本块
     )
+    _timing_stats['6.路径转文本块'] = time.time() - _step6_start
+    logger.info(f"[Mini Query 耗时] 步骤6-路径转文本块: {_timing_stats['6.路径转文本块']:.3f}秒")
 
     #7. 构建最终上下文
+    _step7_start = time.time()
     # 初始化实体部分列表，用于构建最终的实体上下文
     entites_section_list = []
     # 并发获取所有实体的详细信息
@@ -3514,6 +3444,17 @@ async def _build_mini_query_context(
     # 转换文本块列表为CSV格式字符串
     text_units_context = list_of_list_to_csv(text_units_section_list)
 
+    _timing_stats['7.构建最终上下文'] = time.time() - _step7_start
+    logger.info(f"[Mini Query 耗时] 步骤7-构建最终上下文: {_timing_stats['7.构建最终上下文']:.3f}秒")
+    
+    # 计算并输出总耗时
+    _total_time = time.time() - _total_start_time
+    logger.info(f"[Mini Query 耗时统计] ========== 上下文构建总耗时: {_total_time:.3f}秒 ==========")
+    logger.info(f"[Mini Query 耗时统计] 各步骤耗时明细:")
+    for step_name, step_time in _timing_stats.items():
+        percentage = (step_time / _total_time * 100) if _total_time > 0 else 0
+        logger.info(f"[Mini Query 耗时统计]   {step_name}: {step_time:.3f}秒 ({percentage:.1f}%)")
+    
     # 构建并返回最终的上下文字符串，包含实体和文本块两部分
     return f"""
 -----Entities-----
@@ -3572,6 +3513,12 @@ async def minirag_query(  # MiniRAG
         8. LLM生成：调用专用LLM模型生成基于推理的回答
         
     """
+    
+    # 记录查询开始时间
+    _query_start_time = time.time()
+    _query_timing = {}
+    logger.info(f"[Mini Query] ========== 开始MiniRAG查询 ==========")
+    
     # 从全局配置中获取LLM模型调用函数
     use_model_func = global_config["llm_model_func"]
     # 获取MiniRAG专用的关键词提取提示词模板
@@ -3581,7 +3528,10 @@ async def minirag_query(  # MiniRAG
     # 将查询文本和类型池格式化到提示词模板中
     kw_prompt = kw_prompt_temp.format(query=query, TYPE_POOL=TYPE_POOL)
     # 调用LLM模型执行关键词提取
+    _kw_start = time.time()
     result = await use_model_func(kw_prompt)
+    _query_timing['A.关键词提取(LLM)'] = time.time() - _kw_start
+    logger.info(f"[Mini Query 耗时] 关键词提取(LLM): {_query_timing['A.关键词提取(LLM)']:.3f}秒")
 
     # 尝试解析LLM返回的JSON格式结果
     try:
@@ -3616,6 +3566,8 @@ async def minirag_query(  # MiniRAG
             return PROMPTS["fail_response"]  # 返回预定义的失败响应
 
     # 构建查询上下文，这是MiniRAG的核心处理步骤
+    _context_start = time.time()
+    logger.info(f"[Mini Query] 开始构建查询上下文...")
     context = await _build_mini_query_context(
         entities_from_query,  # 从查询中识别的实体
         type_keywords,  # 识别的类型关键词
@@ -3630,14 +3582,21 @@ async def minirag_query(  # MiniRAG
         query_param,  # 查询参数
     )
 
+    _query_timing['B.上下文构建'] = time.time() - _context_start
+    logger.info(f"[Mini Query 耗时] 上下文构建: {_query_timing['B.上下文构建']:.3f}秒")
+    
     # 如果只需要上下文而不需要生成回答
     if query_param.only_need_context:
+        _total_query_time = time.time() - _query_start_time
+        logger.info(f"[Mini Query] ========== 查询完成(仅上下文) 总耗时: {_total_query_time:.3f}秒 ==========")
         return context  # 直接返回构建的上下文
     # 如果上下文为空
     if context is None:
         return PROMPTS["fail_response"]  # 返回预定义的失败响应
 
     # 获取RAG响应提示词模板
+    _response_start = time.time()
+    logger.info(f"[Mini Query] 上下文构建完成，开始生成最终回答...")
     sys_prompt_temp = PROMPTS["rag_response"]
     # 格式化系统提示词，填入上下文和响应类型
     sys_prompt = sys_prompt_temp.format(
@@ -3649,6 +3608,17 @@ async def minirag_query(  # MiniRAG
         query,  # 用户原始查询
         system_prompt=sys_prompt,  # 包含上下文的系统提示
     )
+    _query_timing['C.LLM响应生成'] = time.time() - _response_start
+    logger.info(f"[Mini Query 耗时] LLM响应生成: {_query_timing['C.LLM响应生成']:.3f}秒")
+    
+    # 输出查询总耗时统计
+    _total_query_time = time.time() - _query_start_time
+    logger.info(f"[Mini Query] ========== MiniRAG查询完成 ==========")
+    logger.info(f"[Mini Query 总耗时统计] 查询总耗时: {_total_query_time:.3f}秒")
+    logger.info(f"[Mini Query 总耗时统计] 各阶段耗时:")
+    for stage_name, stage_time in _query_timing.items():
+        percentage = (stage_time / _total_query_time * 100) if _total_query_time > 0 else 0
+        logger.info(f"[Mini Query 总耗时统计]   {stage_name}: {stage_time:.3f}秒 ({percentage:.1f}%)")
 
     # 返回生成的最终回答
     return response
