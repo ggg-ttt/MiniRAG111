@@ -2807,7 +2807,7 @@ def combine_contexts(
 
     combined_entities = truncate_str_by_tokens(
         process_combine_contexts(hl_entities, ll_entities),
-        2000,
+        query_param.max_token_for_global_context,
         tiktoken_model_name,
     )
     
@@ -2819,7 +2819,7 @@ def combine_contexts(
     )
     combined_relationships = truncate_str_by_tokens(
         combined_relationships,
-        2000,
+        query_param.max_token_for_global_context,
         tiktoken_model_name,
     )
     
@@ -2829,7 +2829,7 @@ def combine_contexts(
     combined_sources = process_combine_contexts(hl_sources, ll_sources)
     combined_sources = truncate_str_by_tokens(
         combined_sources,
-        2000,
+        query_param.max_token_for_text_unit,
         tiktoken_model_name,
     )
     
@@ -2904,7 +2904,7 @@ async def naive_query(
     maybe_trun_chunks = truncate_list_by_token_size(
         chunks,
         key=lambda x: x["content"],
-        max_token_size=query_param.max_token_for_text_unit,
+        max_token_size=query_param.max_token_for_text_unit * 3,
     )
     logger.info(f"Truncate {len(chunks)} to {len(maybe_trun_chunks)} chunks")
     section = "--New Chunk--\n".join([c["content"] for c in maybe_trun_chunks])
@@ -3467,6 +3467,7 @@ async def _build_mini_query_context(
         chunks_ids,  # 候选文本块ID列表
         chunk_nums=int(query_param.top_k / 2)  # 最终返回的文本块数量
     )
+    #top-k=30,最终返回的文本块数量为15,一个文本块长度1200，所以超了
 
     # 检查是否有查询结果，如果没有节点或边结果，返回None
     if not len(results_node):
@@ -3486,6 +3487,29 @@ async def _build_mini_query_context(
     for i, t in enumerate(use_text_units):
         if t is not None:  # 只添加有效的文本块
             text_units_section_list.append([i, t["content"]])  # 添加ID和内容
+    
+    # 对文本块列表进行token长度截断，避免上下文过长
+    # 保存表头，对数据部分进行截断
+    header = text_units_section_list[:1]  # 表头：["id", "content"]
+    data_rows = text_units_section_list[1:]  # 数据部分：[[id, content], ...]
+    
+    # 使用truncate_list_by_token_size对数据部分进行截断
+    # key=lambda x: x[1] 表示使用每行的content部分（索引1）计算token数
+    truncated_data_rows = truncate_list_by_token_size(
+        data_rows,
+        key=lambda x: x[1],  # 使用content字段计算token数
+        max_token_size=query_param.max_token_for_text_unit * 2 ,
+    )
+    
+    # 记录截断信息
+    if len(data_rows) != len(truncated_data_rows):
+        logger.info(
+            f"Mini query: Truncate {len(data_rows)} text units to {len(truncated_data_rows)} "
+            f"(max_token_for_text_unit={query_param.max_token_for_text_unit})"
+        )
+    
+    # 合并表头和数据部分
+    text_units_section_list = header + truncated_data_rows
     
     # 转换文本块列表为CSV格式字符串
     text_units_context = list_of_list_to_csv(text_units_section_list)
