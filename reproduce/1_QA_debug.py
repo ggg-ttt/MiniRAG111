@@ -42,7 +42,7 @@ def get_args():
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
-    parser.add_argument("--delay", type=float, default=2.0)  # API调用之间的延时（秒）
+    # parser.add_argument("--delay", type=float, default=2.0)  # API调用之间的延时（秒）
     args = parser.parse_args()
     return args
 
@@ -67,11 +67,11 @@ WORKING_DIR = args.workingdir
 DATA_PATH = args.datapath
 QUERY_PATH = args.querypath
 OUTPUT_PATH = args.outputpath
-API_DELAY = args.delay  # API调用延时
+# API_DELAY = args.delay  # API调用延时
 
 print("USING LLM:", LLM_MODEL)
 print("USING WORKING DIR:", WORKING_DIR)
-print("API DELAY:", API_DELAY, "seconds")
+# print("API DELAY:", API_DELAY, "seconds")
 
 # 如果工作目录不存在则创建
 if not os.path.exists(WORKING_DIR):
@@ -265,10 +265,9 @@ def run_experiment(output_path, mode: str):
             start_time = time.time()
             
             try:
-                # 设置 mini 模式的上下文长度参数，避免超过模型的最大上下文长度
-                # 模型最大上下文长度: 10240 tokens
-                # 当前默认值总和: 4000 + 2000 + 2000 + 500 = 8500 tokens (不含查询和提示词)
-                # 如果遇到上下文过长错误，可以适当减少这些值
+                #navie长度为max_token_for_text_unit * 3
+                #light长度为max_token_for_text_unit+max_token_for_global_context+max_token_for_local_context
+                #mini长度为max_token_for_text_unit * 2+max_token_for_node_context
                 query_param = QueryParam(
                     mode=mode,
                     max_token_for_text_unit=2000,      # 文本单元最大token数（默认4000）
@@ -291,10 +290,10 @@ def run_experiment(output_path, mode: str):
                 minirag_answer = "Error"
                 error_info = f"{type(e).__name__}: {str(e)}"
 
-            # API调用延时（如果成功）
-            if minirag_answer != "Error" and API_DELAY > 0:
-                print(f"\n[DELAY] Waiting {API_DELAY} seconds before next request...")
-                time.sleep(API_DELAY)
+            # # API调用延时（如果成功）
+            # if minirag_answer != "Error" and API_DELAY > 0:
+            #     print(f"\n[DELAY] Waiting {API_DELAY} seconds before next request...")
+            #     time.sleep(API_DELAY)
         else:
             # 使用现有数据
             minirag_answer = existing_row[result_column] if existing_row else "Error"
@@ -380,7 +379,7 @@ if __name__ == "__main__":
     total_count = len(QUESTION_LIST)
 
     print(f"\n开始运行实验，共 {total_count} 个问题")
-    print(f"API调用延时设置为: {API_DELAY} 秒")
+    # print(f"API调用延时设置为: {API_DELAY} 秒")
 
     # 运行实验并获取模式特定的输出路径
     actual_output_path = run_experiment(OUTPUT_PATH, mode=mode)
