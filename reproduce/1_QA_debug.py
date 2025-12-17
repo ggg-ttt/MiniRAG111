@@ -198,10 +198,11 @@ def run_experiment(output_path, mode: str):
         print("Invalid mode")
         exit(1)
 
-    # 为不同模式创建独立的输出文件
-    base_name = os.path.splitext(output_path)[0]  # 文件名不带扩展名
+    # 为不同模式创建独立的输出文件，放在 WORKING_DIR 目录下
+    base_name = os.path.splitext(os.path.basename(output_path))[0]  # 去掉路径，只保留基础文件名
     extension = os.path.splitext(output_path)[1]  # 文件扩展名（如.csv）
-    mode_output_path = f"{args.model}_{mode_suffix}{extension}"
+    filename = f"{args.model}_{base_name}_{mode_suffix}{extension}"
+    mode_output_path = os.path.join(WORKING_DIR, filename)
 
     print(f"使用 {mode} 模式，结果将保存到: {mode_output_path}")
 
@@ -264,7 +265,18 @@ def run_experiment(output_path, mode: str):
             start_time = time.time()
             
             try:
-                minirag_answer = rag.query(QUESTION, param=QueryParam(mode=mode))
+                # 设置 mini 模式的上下文长度参数，避免超过模型的最大上下文长度
+                # 模型最大上下文长度: 10240 tokens
+                # 当前默认值总和: 4000 + 2000 + 2000 + 500 = 8500 tokens (不含查询和提示词)
+                # 如果遇到上下文过长错误，可以适当减少这些值
+                query_param = QueryParam(
+                    mode=mode,
+                    max_token_for_text_unit=2000,      # 文本单元最大token数（默认4000）
+                    max_token_for_global_context=2000, # 全局上下文最大token数（默认2000）
+                    max_token_for_local_context=2000,  # 本地上下文最大token数（默认2000）
+                    max_token_for_node_context=500,    # 节点上下文最大token数（默认500）
+                )
+                minirag_answer = rag.query(QUESTION, param=query_param)
                 minirag_answer = minirag_answer.replace("\n", "").replace("\r", "")
                 error_info = ""
                 elapsed = time.time() - start_time
@@ -361,7 +373,7 @@ def merge_answer(output_path, mode: str):
 
 # 主流程，直接运行实验
 if __name__ == "__main__":
-    mode = "light"
+    mode = "mini"
 
     # 统计错误信息
     error_count = 0
