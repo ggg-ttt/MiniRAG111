@@ -38,19 +38,19 @@ def parse_args():
     parser.add_argument(
         "--gpu",
         type=str,
-        default="0,1",
+        default="0",
         help="使用的 GPU 设备，默认 0。可以是单个设备如 '0' 或多个设备如 '0,1'"
     )
     parser.add_argument(
         "--max-model-len",
         type=int,
-        default=10240,
+        default=8192,
         help="最大模型长度（上下文窗口），默认 8192"
     )
     parser.add_argument(
         "--tensor-parallel-size",
         type=int,
-        default=2,
+        default=1,
         help="张量并行大小（多 GPU 时使用），默认 1"
     )
     parser.add_argument(
