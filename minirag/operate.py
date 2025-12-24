@@ -68,9 +68,6 @@ async def _handle_entity_relation_summary(
     """
     对实体或关系描述进行智能摘要处理（当描述长度超限时）
     
-    该函数是MiniRAG实体关系抽取流程中的重要组件，负责对过长描述进行摘要压缩。
-    通过智能压缩确保实体和关系信息能够适配存储和处理的token限制，
-    同时保持核心语义信息的完整性。
     
     Args:
         entity_or_relation_name (str): 待摘要的实体或关系的名称
@@ -908,19 +905,6 @@ async def extract_entities(
                - 使用条件判断确保数据有效性
                - 返回空列表而不是抛出异常
         
-        性能优化特性:
-            - 异步并发处理能力
-            - 智能终止机制减少无效计算
-            - 内存友好的数据结构设计
-            - 高效的字符串处理和正则匹配
-            - 实时进度反馈提升用户体验
-        
-        使用场景:
-            - 批量文档的实体关系抽取
-            - 知识图谱的自动化构建
-            - 非结构化文本的结构化处理
-            - RAG系统的知识库构建
-            - 大规模文本挖掘和知识提取
         
         """
         # 使用nonlocal关键字访问闭包变量，这些变量用于跟踪处理进度
@@ -1060,17 +1044,17 @@ async def extract_entities(
         return None
 
     # 如果提供了实体向量数据库，将实体信息插入向量数据库以支持相似性检索
-    if entity_vdb is not None:
-        # 构建实体向量数据库的插入数据，计算实体ID并准备向量内容
-        data_for_vdb = {
-            compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
-                "content": dp["entity_name"] + dp["description"],  # 实体名称+描述作为向量内容
-                "entity_name": dp["entity_name"],  # 保存原始实体名称
-            }
-            for dp in all_entities_data
-        }
-        # 执行向量数据插入
-        await entity_vdb.upsert(data_for_vdb)
+    # if entity_vdb is not None:
+    #     # 构建实体向量数据库的插入数据，计算实体ID并准备向量内容
+    #     data_for_vdb = {
+    #         compute_mdhash_id(dp["entity_name"], prefix="ent-"): {
+    #             "content": dp["entity_name"] + dp["description"],  # 实体名称+描述作为向量内容
+    #             "entity_name": dp["entity_name"],  # 保存原始实体名称
+    #         }
+    #         for dp in all_entities_data
+    #     }
+    #     # 执行向量数据插入
+    #     await entity_vdb.upsert(data_for_vdb)
     # 再次插入实体向量数据，但这次使用空格分隔名称和描述
     # 注：这里可能是代码冗余，也可能是为了提高不同检索场景下的匹配效果
     if entity_vdb is not None:
