@@ -126,7 +126,7 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
 rag = MiniRAG(
     working_dir=WORKING_DIR,
     llm_model_func=vllm_server_complete,  # 使用 vLLM server 包装函数
-    llm_model_max_token_size=8192,         # LLM最大token数
+    llm_model_max_token_size=8192,         # 输入（Prompt）与输出（Completion）的总和长度，即模型的最大上下文窗口（Context Window）
     llm_model_name=LLM_MODEL,              # LLM模型名称
     embedding_batch_num=16,                # 减小embedding批次大小，降低显存占用（默认32）
     embedding_func=EmbeddingFunc(

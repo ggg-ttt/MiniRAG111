@@ -803,9 +803,11 @@ class MiniRAG:
                 **dp,
                 "full_doc_id": doc_id,
             }
+            # 遍历所有已处理的文档 (Doc A, Doc B, Doc C...)
             for doc_id, status_doc in (
                 await self.doc_status.get_docs_by_status(DocStatus.PROCESSED)
             ).items()
+            # 遍历每个文档的所有分块
             for dp in self.chunking_func(
                 status_doc.content,
                 self.chunk_overlap_token_size,
