@@ -133,6 +133,7 @@ def get_default_host(binding_type: str) -> str:
         "lollms": os.getenv("LLM_BINDING_HOST", "http://localhost:9600"),
         "azure_openai": os.getenv("AZURE_OPENAI_ENDPOINT", "https://api.openai.com/v1"),
         "openai": os.getenv("LLM_BINDING_HOST", "https://api.openai.com/v1"),
+        "hf": "",  # HF models are loaded locally, no host needed
     }
     return default_hosts.get(
         binding_type, os.getenv("LLM_BINDING_HOST", "http://localhost:11434")
@@ -336,12 +337,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--llm-binding",
         default=get_env_value("LLM_BINDING", "ollama"),
-        help="LLM binding to be used. Supported: lollms, ollama, openai (default: from env or ollama)",
+        help="LLM binding to be used. Supported: lollms, ollama, openai, azure_openai, hf (default: from env or ollama)",
     )
     parser.add_argument(
         "--embedding-binding",
         default=get_env_value("EMBEDDING_BINDING", "ollama"),
-        help="Embedding binding to be used. Supported: lollms, ollama, openai (default: from env or ollama)",
+        help="Embedding binding to be used. Supported: lollms, ollama, openai, azure_openai, hf (default: from env or ollama)",
     )
 
     # Server configuration
@@ -714,10 +715,11 @@ def create_app(args):
         "openai",
         "openai-ollama",
         "azure_openai",
+        "hf",
     ]:
         raise Exception("llm binding not supported")
 
-    if args.embedding_binding not in ["lollms", "ollama", "openai", "azure_openai"]:
+    if args.embedding_binding not in ["lollms", "ollama", "openai", "azure_openai", "hf"]:
         raise Exception("embedding binding not supported")
 
     # Set default hosts if not provided
@@ -812,6 +814,9 @@ def create_app(args):
     if args.llm_binding_host == "openai-ollama" or args.embedding_binding == "ollama":
         from minirag.llm.openai import openai_complete_if_cache
         from minirag.llm.ollama import ollama_embed
+    if args.llm_binding == "hf" or args.embedding_binding == "hf":
+        from minirag.llm.hf import hf_model_complete, hf_embed
+        from transformers import AutoTokenizer, AutoModel
 
     async def openai_alike_model_complete(
         prompt,
@@ -848,6 +853,22 @@ def create_app(args):
             **kwargs,
         )
 
+    # Initialize HF models if hf binding is used
+    hf_tokenizer = None
+    hf_embed_model = None
+    if args.llm_binding == "hf" or args.embedding_binding == "hf":
+        import torch
+        ASCIIColors.info(f"Loading HF embedding model: {args.embedding_model}")
+        hf_tokenizer = AutoTokenizer.from_pretrained(args.embedding_model, device_map="auto")
+        if hf_tokenizer.pad_token is None:
+            hf_tokenizer.pad_token = hf_tokenizer.eos_token
+        hf_embed_model = AutoModel.from_pretrained(
+            args.embedding_model,
+            device_map="auto",
+            dtype=torch.float16,
+        )
+        ASCIIColors.success("HF embedding model loaded successfully")
+
     embedding_func = EmbeddingFunc(
         embedding_dim=args.embedding_dim,
         max_token_size=args.max_embed_tokens,
@@ -875,18 +896,29 @@ def create_app(args):
             texts,
             model=args.embedding_model,  # no host is used for openai,
             api_key=args.embedding_binding_api_key,
+        )
+        if args.embedding_binding == "openai"
+        else (lambda texts: hf_embed(texts, tokenizer=hf_tokenizer, embed_model=hf_embed_model))
+        if args.embedding_binding == "hf"
+        else ollama_embed(
+            texts,
+            embed_model=args.embedding_model,
+            host=args.embedding_binding_host,
+            api_key=args.embedding_binding_api_key,
         ),
     )
 
     # Initialize RAG
-    if args.llm_binding in ["lollms", "ollama", "openai-ollama"]:
+    if args.llm_binding in ["lollms", "ollama", "openai-ollama", "hf"]:
         rag = MiniRAG(
             working_dir=args.working_dir,
             llm_model_func=lollms_model_complete
             if args.llm_binding == "lollms"
             else ollama_model_complete
             if args.llm_binding == "ollama"
-            else openai_alike_model_complete,
+            else openai_alike_model_complete
+            if args.llm_binding == "openai-ollama"
+            else hf_model_complete,
             llm_model_name=args.llm_model,
             llm_model_max_async=args.max_async,
             llm_model_max_token_size=args.max_tokens,

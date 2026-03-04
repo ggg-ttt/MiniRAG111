@@ -1,0 +1,1157 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniRAG 系统界面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- Markdown 渲染 -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <!-- 图谱可视化库 -->
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+    <!-- 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .chat-container { height: calc(100vh - 280px); min-height: 400px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { border-bottom-color: #4f46e5; color: #4f46e5; }
+        .log-entry { padding: 2px 0; }
+        .log-entry.info { color: #4ade80; }
+        .log-entry.warn { color: #facc15; }
+        .log-entry.error { color: #f87171; }
+        .text-ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .break-words { overflow-wrap: break-word; word-wrap: break-word; word-break: break-word; }
+        .line-clamp-2 { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .toast { position: fixed; bottom: 1.5rem; right: 1.5rem; z-index: 9999; transition: all 0.3s ease; }
+        .toast.hidden { opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .toast.show { opacity: 1; transform: translateY(0); }
+        .upload-progress { transition: width 0.3s ease; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <!-- Toast 通知 -->
+    <div id="toast" class="toast hidden">
+        <div class="bg-gray-800 text-white px-6 py-3 rounded-lg shadow-lg flex items-center space-x-2">
+            <i id="toast-icon" class="fas fa-info-circle"></i>
+            <span id="toast-msg"></span>
+        </div>
+    </div>
+
+    <!-- 顶部导航栏 -->
+    <nav class="bg-indigo-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-project-diagram text-yellow-300 text-2xl"></i>
+                <span class="text-xl font-bold tracking-tight">MiniRAG 系统</span>
+            </div>
+            <div class="flex space-x-4 text-sm items-center">
+                <span>状态: <span id="nav-status" class="text-yellow-300">● 连接中...</span></span>
+                <span><i class="fas fa-server mr-1"></i><span id="nav-mode">检测中</span></span>
+                <div class="flex items-center space-x-2">
+                    <label class="text-xs">API Key:</label>
+                    <input type="password" id="api-key-input" placeholder="可选"
+                        class="bg-indigo-500 text-white text-xs rounded px-2 py-1 w-32 placeholder-indigo-300 focus:outline-none focus:ring-1 focus:ring-white">
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 标签页导航 -->
+    <div class="bg-white border-b shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-1 overflow-x-auto">
+                <button class="tab-btn active py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="chat">
+                    <i class="fas fa-comments mr-2"></i>问答对话
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="graph">
+                    <i class="fas fa-project-diagram mr-2"></i>图谱可视化
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="documents">
+                    <i class="fas fa-file-alt mr-2"></i>文档管理
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="monitor">
+                    <i class="fas fa-chart-line mr-2"></i>系统监控
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="entities">
+                    <i class="fas fa-database mr-2"></i>实体管理
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="container mx-auto mt-6 px-4 pb-8">
+        <div class="grid grid-cols-12 gap-6">
+
+            <!-- 左侧边栏 -->
+            <aside id="sidebar" class="col-span-12 md:col-span-3 space-y-6">
+
+                <!-- 后端连接配置 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <h3 class="font-bold flex items-center text-sm mb-4">
+                        <i class="fas fa-link mr-2 text-indigo-600"></i> 后端连接
+                    </h3>
+                    <div class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">服务器地址</label>
+                            <input type="text" id="server-url" value="http://localhost:9721"
+                                class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                        </div>
+                        <button onclick="checkConnection()" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-plug mr-2"></i>测试连接
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 模型配置（只读，从后端获取） -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="togglePanel('model-config')">
+                        <h3 class="font-bold flex items-center text-sm">
+                            <i class="fas fa-cog mr-2 text-indigo-600"></i> 模型配置
+                        </h3>
+                        <i class="fas fa-chevron-down text-indigo-600 text-xs" id="model-config-toggle"></i>
+                    </div>
+                    <div id="model-config-panel" class="space-y-3">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">LLM 模型</label>
+                            <div id="llm-model-display" class="w-full border rounded p-2 text-sm bg-gray-100 text-gray-600">未连接</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">嵌入模型</label>
+                            <div id="embedding-model-display" class="w-full border rounded p-2 text-sm bg-gray-100 text-gray-600">未连接</div>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">检索模式</label>
+                            <select id="retrieval-mode" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="light">light (路径检索)</option>
+                                <option value="naive">naive (普通 RAG)</option>
+                                <option value="mini">mini (轻量检索)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据管理 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="togglePanel('data-management')">
+                        <h3 class="font-bold flex items-center text-sm">
+                            <i class="fas fa-upload mr-2 text-indigo-600"></i> 数据管理
+                        </h3>
+                        <i class="fas fa-chevron-down text-indigo-600 text-xs" id="data-management-toggle"></i>
+                    </div>
+                    <div id="data-management-panel">
+                        <!-- 文件上传区域 -->
+                        <div id="drop-zone" class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors cursor-pointer"
+                             onclick="document.getElementById('file-input').click()">
+                            <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                            <p class="text-xs text-gray-500">点击或拖拽上传文件</p>
+                            <p class="text-[10px] text-gray-400 mt-1">支持 .txt, .pdf, .md, .docx, .pptx</p>
+                        </div>
+                        <input type="file" id="file-input" class="hidden" multiple accept=".txt,.pdf,.md,.docx,.pptx">
+
+                        <!-- 待上传文件列表 -->
+                        <div id="pending-files" class="mt-3 space-y-1 max-h-40 overflow-y-auto"></div>
+
+                        <!-- 上传进度 -->
+                        <div id="upload-progress-container" class="mt-3 hidden">
+                            <div class="w-full bg-gray-200 rounded-full h-2">
+                                <div id="upload-progress-bar" class="bg-indigo-600 h-2 rounded-full upload-progress" style="width: 0%"></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-1" id="upload-progress-text">准备上传...</p>
+                        </div>
+
+                        <!-- 操作按钮 -->
+                        <div class="mt-4 space-y-2">
+                            <button onclick="uploadFiles()" id="upload-btn" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                                <i class="fas fa-upload mr-2"></i>上传并索引
+                            </button>
+                            <button onclick="scanDirectory()" class="w-full border border-indigo-600 text-indigo-600 py-2 rounded-lg text-sm hover:bg-indigo-50 transition-colors">
+                                <i class="fas fa-sync-alt mr-2"></i>扫描输入目录
+                            </button>
+                            <button onclick="clearDocuments()" class="w-full border border-red-300 text-red-600 py-2 rounded-lg text-sm hover:bg-red-50 transition-colors">
+                                <i class="fas fa-trash-alt mr-2"></i>清空数据
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="col-span-12 md:col-span-9">
+
+                <!-- ========== 问答对话标签页 ========== -->
+                <div id="chat-tab" class="tab-content active">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="chat-container overflow-y-auto p-6 space-y-4 bg-gray-50" id="chat-box">
+                            <div class="flex items-start">
+                                <div class="bg-indigo-100 text-indigo-800 p-4 rounded-lg max-w-2xl text-sm">
+                                    <p class="font-semibold mb-2">👋 你好！我是 MiniRAG 助手</p>
+                                    <p>基于小型语言模型的图基增强检索生成系统。我可以：</p>
+                                    <ul class="mt-2 space-y-1 text-xs">
+                                        <li>• 回答基于知识图谱的复杂问题</li>
+                                        <li>• 展示推理路径和引用来源</li>
+                                        <li>• 支持多种检索模式（light / naive / mini）</li>
+                                    </ul>
+                                    <p class="mt-2 text-xs text-indigo-600">请先在左侧配置后端地址并上传文档，然后向我提问！</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 border-t bg-white">
+                            <div class="relative flex items-center">
+                                <input type="text" id="user-input" placeholder="输入您的问题..." class="w-full border rounded-full py-3 px-6 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner">
+                                <button onclick="sendMessage()" id="send-btn" class="absolute right-2 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="flex justify-between mt-3 text-[10px] text-gray-400 px-2">
+                                <span>当前模式: <span id="current-mode" class="text-indigo-600 font-semibold">light</span></span>
+                                <span>最近耗时: <span id="last-query-time">-</span></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== 图谱可视化标签页 ========== -->
+                <div id="graph-tab" class="tab-content">
+                    <div class="grid grid-cols-12 gap-6">
+                        <aside class="col-span-3">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="font-bold mb-4 text-sm">图谱控制</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">选择图谱标签</label>
+                                        <select id="graph-label-select" class="w-full border rounded p-2 text-sm" onchange="loadGraphByLabel()">
+                                            <option value="">-- 请选择 --</option>
+                                        </select>
+                                    </div>
+                                    <button onclick="refreshGraphLabels()" class="w-full bg-indigo-600 text-white py-2 rounded text-sm hover:bg-indigo-700">
+                                        <i class="fas fa-sync-alt mr-2"></i>刷新标签
+                                    </button>
+                                    <button onclick="layoutGraph()" class="w-full border border-indigo-600 text-indigo-600 py-2 rounded text-sm hover:bg-indigo-50">
+                                        <i class="fas fa-redo mr-2"></i>重新布局
+                                    </button>
+                                    <div class="pt-2 border-t">
+                                        <p class="text-xs text-gray-500 mb-2">图统计</p>
+                                        <div class="text-xs space-y-1">
+                                            <p>节点数: <span class="font-semibold text-indigo-600" id="node-count">0</span></p>
+                                            <p>边数: <span class="font-semibold text-indigo-600" id="edge-count">0</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                        <main class="col-span-9">
+                            <div id="graph-canvas" class="bg-slate-300 rounded-xl border border-slate-400 flex items-center justify-center" style="height: 600px;">
+                                <div class="text-center text-slate-500">
+                                    <i class="fas fa-project-diagram text-4xl mb-3"></i>
+                                    <p class="text-sm">请先选择一个图谱标签加载数据</p>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+
+                <!-- ========== 文档管理标签页 ========== -->
+                <div id="documents-tab" class="tab-content">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-lg font-bold">已索引文件列表</h2>
+                            <div class="flex space-x-2">
+                                <button onclick="loadDocuments()" class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                                    <i class="fas fa-sync-alt mr-1"></i>刷新
+                                </button>
+                            </div>
+                        </div>
+                        <div id="documents-loading" class="text-center py-8 text-gray-400 hidden">
+                            <i class="fas fa-spinner fa-spin text-2xl mb-2"></i>
+                            <p class="text-sm">加载中...</p>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left p-3 font-semibold">#</th>
+                                        <th class="text-left p-3 font-semibold">文件路径</th>
+                                        <th class="text-left p-3 font-semibold">文件名</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="document-list">
+                                    <tr>
+                                        <td colspan="3" class="p-6 text-center text-gray-400">
+                                            <i class="fas fa-folder-open text-2xl mb-2"></i>
+                                            <p>暂无已索引文件，请先连接后端并上传文档</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== 系统监控标签页 ========== -->
+                <div id="monitor-tab" class="tab-content">
+                    <div class="space-y-6">
+                        <!-- 核心指标卡片 -->
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">系统状态</p>
+                                        <p class="text-xl font-bold" id="monitor-status">-</p>
+                                        <p class="text-xs text-gray-400" id="monitor-status-detail">未连接</p>
+                                    </div>
+                                    <i class="fas fa-heartbeat text-3xl text-green-200"></i>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">已索引文件</p>
+                                        <p class="text-2xl font-bold text-indigo-600" id="monitor-files">0</p>
+                                        <p class="text-xs text-gray-400" id="monitor-input-dir">-</p>
+                                    </div>
+                                    <i class="fas fa-file-alt text-3xl text-indigo-200"></i>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">LLM 模型</p>
+                                        <p class="text-sm font-bold text-purple-600 break-words" id="monitor-llm">-</p>
+                                        <p class="text-xs text-gray-400" id="monitor-llm-binding">-</p>
+                                    </div>
+                                    <i class="fas fa-robot text-3xl text-purple-200"></i>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">存储后端</p>
+                                        <p class="text-sm font-bold text-yellow-600" id="monitor-storage">-</p>
+                                        <p class="text-xs text-gray-400" id="monitor-storage-detail">-</p>
+                                    </div>
+                                    <i class="fas fa-database text-3xl text-yellow-200"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 配置详情 -->
+                        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                            <h3 class="font-bold text-sm mb-4"><i class="fas fa-sliders-h mr-2"></i>完整配置信息</h3>
+                            <div id="config-detail" class="grid grid-cols-2 gap-4 text-sm">
+                                <p class="text-gray-400 col-span-2 text-center py-4">请先连接后端以查看配置</p>
+                            </div>
+                        </div>
+
+                        <!-- 查询历史统计 -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                            <h3 class="font-bold text-sm mb-4"><i class="fas fa-history mr-2"></i>本次会话查询记录</h3>
+                            <div id="query-history-log" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs h-48 overflow-y-auto">
+                                <div class="log-entry info">[系统] 等待连接后端...</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ========== 实体管理标签页 ========== -->
+                <div id="entities-tab" class="tab-content">
+                    <div class="grid grid-cols-12 gap-6">
+                        <aside class="col-span-4">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="font-bold mb-4 text-sm">图谱实体浏览</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">选择图谱标签</label>
+                                        <select id="entity-label-select" class="w-full border rounded p-2 text-sm" onchange="loadEntitiesByLabel()">
+                                            <option value="">-- 请选择 --</option>
+                                        </select>
+                                    </div>
+                                    <input type="text" id="entity-search" placeholder="搜索实体..." class="w-full border rounded p-2 text-sm" oninput="filterEntities()">
+                                </div>
+                                <div id="entity-list" class="space-y-2 max-h-96 overflow-y-auto mt-4">
+                                    <p class="text-center text-gray-400 text-xs py-4">请先选择图谱标签</p>
+                                </div>
+                            </div>
+                        </aside>
+                        <main class="col-span-8">
+                            <div id="entity-detail" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <div class="text-center text-gray-400 py-12">
+                                    <i class="fas fa-mouse-pointer text-4xl mb-4"></i>
+                                    <p>请从左侧选择一个实体查看详情</p>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+    // ==================== 全局配置与状态 ====================
+    const state = {
+        graph: null,
+        pendingFiles: [],
+        allEntities: [],     // 存储当前标签下的所有实体
+        allEdges: [],        // 存储当前标签下的所有边
+        queryHistory: [],    // 查询历史
+        connected: false
+    };
+
+    function getBaseUrl() {
+        return document.getElementById('server-url').value.replace(/\/+$/, '');
+    }
+
+    function getApiKey() {
+        return document.getElementById('api-key-input').value.trim();
+    }
+
+    // ==================== 通用工具函数 ====================
+    function showToast(message, type = 'info') {
+        const toast = document.getElementById('toast');
+        const icon = document.getElementById('toast-icon');
+        const msg = document.getElementById('toast-msg');
+
+        const iconMap = {
+            'info': 'fas fa-info-circle text-blue-400',
+            'success': 'fas fa-check-circle text-green-400',
+            'error': 'fas fa-exclamation-triangle text-red-400',
+            'warn': 'fas fa-exclamation-circle text-yellow-400'
+        };
+
+        icon.className = iconMap[type] || iconMap.info;
+        msg.textContent = message;
+        toast.classList.remove('hidden');
+        toast.classList.add('show');
+
+        setTimeout(() => {
+            toast.classList.remove('show');
+            toast.classList.add('hidden');
+        }, 3500);
+    }
+
+    async function apiRequest(endpoint, method = 'GET', body = null, isFormData = false) {
+        const url = `${getBaseUrl()}${endpoint}`;
+        const headers = {};
+        const apiKey = getApiKey();
+
+        if (apiKey) {
+            headers['X-API-Key'] = apiKey;
+        }
+
+        if (!isFormData && body) {
+            headers['Content-Type'] = 'application/json';
+        }
+
+        const options = { method, headers };
+        if (body) {
+            options.body = isFormData ? body : JSON.stringify(body);
+        }
+
+        const response = await fetch(url, options);
+        if (!response.ok) {
+            const errText = await response.text();
+            throw new Error(`HTTP ${response.status}: ${errText}`);
+        }
+        return await response.json();
+    }
+
+    function addLog(message, level = 'info') {
+        const logContainer = document.getElementById('query-history-log');
+        if (!logContainer) return;
+        const time = new Date().toLocaleTimeString();
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${level}`;
+        entry.textContent = `[${time}] ${message}`;
+        logContainer.appendChild(entry);
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // ==================== 面板折叠 ====================
+    function togglePanel(panelName) {
+        const panel = document.getElementById(panelName + '-panel');
+        const toggle = document.getElementById(panelName + '-toggle');
+        const isHidden = panel.style.display === 'none';
+        panel.style.display = isHidden ? '' : 'none';
+        toggle.className = isHidden ? 'fas fa-chevron-down text-indigo-600 text-xs' : 'fas fa-chevron-right text-indigo-600 text-xs';
+    }
+
+    // ==================== 连接检测 ====================
+    async function checkConnection() {
+        const statusEl = document.getElementById('nav-status');
+        const modeEl = document.getElementById('nav-mode');
+        statusEl.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> 连接中...';
+        statusEl.className = 'text-yellow-300';
+
+        try {
+            const data = await apiRequest('/health');
+            state.connected = true;
+
+            statusEl.textContent = '● 已连接';
+            statusEl.className = 'text-green-300';
+
+            // 更新模型信息
+            const config = data.configuration || {};
+            modeEl.textContent = config.llm_binding || '未知';
+            document.getElementById('llm-model-display').textContent = config.llm_model || '-';
+            document.getElementById('embedding-model-display').textContent = config.embedding_model || '-';
+
+            showToast(`连接成功！已索引 ${data.indexed_files_count || 0} 个文件`, 'success');
+            addLog(`连接后端成功: ${getBaseUrl()}, 已索引 ${data.indexed_files_count || 0} 个文件`);
+
+            return data;
+        } catch (err) {
+            state.connected = false;
+            statusEl.textContent = '● 连接失败';
+            statusEl.className = 'text-red-300';
+            modeEl.textContent = '离线';
+            showToast(`连接失败: ${err.message}`, 'error');
+            addLog(`连接失败: ${err.message}`, 'error');
+            return null;
+        }
+    }
+
+    // ==================== 标签页切换 ====================
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.getElementById(tabName + '-tab').classList.add('active');
+
+            // 标签页初始化
+            if (tabName === 'graph') refreshGraphLabels();
+            if (tabName === 'monitor') loadHealthStatus();
+            if (tabName === 'documents') loadDocuments();
+            if (tabName === 'entities') refreshEntityLabels();
+
+            // 控制侧边栏显示
+            const sidebar = document.getElementById('sidebar');
+            sidebar.style.display = (tabName === 'chat') ? 'block' : 'none';
+        });
+    });
+
+    // ==================== 问答功能 ====================
+    async function sendMessage() {
+        const input = document.getElementById('user-input');
+        const chatBox = document.getElementById('chat-box');
+        const sendBtn = document.getElementById('send-btn');
+        const query = input.value.trim();
+        if (!query) return;
+
+        if (!state.connected) {
+            showToast('请先连接后端服务', 'warn');
+            return;
+        }
+
+        // 显示用户消息
+        chatBox.innerHTML += `
+            <div class="flex justify-end mb-4">
+                <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-sm max-w-2xl text-sm shadow-md break-words">
+                    ${escapeHtml(query)}
+                </div>
+            </div>
+        `;
+        input.value = '';
+        chatBox.scrollTop = chatBox.scrollHeight;
+
+        // 显示思考状态
+        const thinkingId = 'thinking-' + Date.now();
+        chatBox.innerHTML += `
+            <div id="${thinkingId}" class="flex items-start mb-4">
+                <div class="bg-white border p-4 rounded-2xl rounded-tl-sm max-w-2xl text-sm shadow-sm">
+                    <div class="flex items-center space-x-2 text-gray-500">
+                        <i class="fas fa-spinner fa-spin"></i>
+                        <span>正在检索知识图谱并生成回答...</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        chatBox.scrollTop = chatBox.scrollHeight;
+        sendBtn.disabled = true;
+
+        const mode = document.getElementById('retrieval-mode').value;
+        document.getElementById('current-mode').textContent = mode;
+
+        const startTime = performance.now();
+
+        try {
+            const result = await apiRequest('/query', 'POST', {
+                query: query,
+                mode: mode,
+                stream: false,
+                only_need_context: false
+            });
+
+            const totalTime = Math.round(performance.now() - startTime);
+            document.getElementById('last-query-time').textContent = `${totalTime}ms`;
+
+            // 移除思考状态
+            const thinkingEl = document.getElementById(thinkingId);
+            if (thinkingEl) thinkingEl.remove();
+
+            // 渲染回答（支持 Markdown）
+            let renderedResponse = '';
+            try {
+                renderedResponse = marked.parse(result.response || '未获取到回答');
+            } catch (e) {
+                renderedResponse = escapeHtml(result.response || '未获取到回答');
+            }
+
+            chatBox.innerHTML += `
+                <div class="flex items-start mb-4">
+                    <div class="bg-white border p-4 rounded-2xl rounded-tl-sm max-w-2xl text-sm shadow-sm">
+                        <div class="text-gray-700 mb-4 break-words prose prose-sm max-w-none">${renderedResponse}</div>
+                        <div class="mt-3 pt-3 border-t flex justify-between text-[10px] text-gray-500">
+                            <span>模式: ${mode}</span>
+                            <span>总耗时: ${totalTime}ms</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            addLog(`查询完成 [${mode}]: "${query.substring(0, 30)}..." → ${totalTime}ms`);
+            state.queryHistory.push({ query, mode, time: totalTime, ts: new Date().toISOString() });
+
+        } catch (err) {
+            const thinkingEl = document.getElementById(thinkingId);
+            if (thinkingEl) thinkingEl.remove();
+
+            chatBox.innerHTML += `
+                <div class="flex items-start mb-4">
+                    <div class="bg-red-50 border border-red-200 p-4 rounded-2xl text-sm text-red-600">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>请求失败: ${escapeHtml(err.message)}
+                        <br><span class="text-xs">请确认后端服务已启动 (${escapeHtml(getBaseUrl())})</span>
+                    </div>
+                </div>
+            `;
+            addLog(`查询失败: ${err.message}`, 'error');
+        }
+
+        chatBox.scrollTop = chatBox.scrollHeight;
+        sendBtn.disabled = false;
+    }
+
+    // 回车发送
+    document.getElementById('user-input').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') sendMessage();
+    });
+
+    // ==================== 文件上传 ====================
+    const fileInput = document.getElementById('file-input');
+    const dropZone = document.getElementById('drop-zone');
+
+    fileInput.addEventListener('change', function() {
+        addPendingFiles(Array.from(this.files));
+        this.value = '';
+    });
+
+    dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-indigo-500', 'bg-indigo-50'); });
+    dropZone.addEventListener('dragleave', () => { dropZone.classList.remove('border-indigo-500', 'bg-indigo-50'); });
+    dropZone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropZone.classList.remove('border-indigo-500', 'bg-indigo-50');
+        addPendingFiles(Array.from(e.dataTransfer.files));
+    });
+
+    function addPendingFiles(files) {
+        state.pendingFiles.push(...files);
+        renderPendingFiles();
+    }
+
+    function removePendingFile(index) {
+        state.pendingFiles.splice(index, 1);
+        renderPendingFiles();
+    }
+
+    function renderPendingFiles() {
+        const container = document.getElementById('pending-files');
+        if (state.pendingFiles.length === 0) {
+            container.innerHTML = '';
+            return;
+        }
+        container.innerHTML = state.pendingFiles.map((f, i) => `
+            <div class="flex items-center justify-between bg-gray-50 rounded p-2 text-xs">
+                <span class="truncate flex-1 mr-2"><i class="fas fa-file mr-1 text-gray-400"></i>${escapeHtml(f.name)}</span>
+                <span class="text-gray-400 mr-2">${(f.size / 1024).toFixed(1)} KB</span>
+                <button onclick="removePendingFile(${i})" class="text-red-400 hover:text-red-600"><i class="fas fa-times"></i></button>
+            </div>
+        `).join('');
+    }
+
+    async function uploadFiles() {
+        if (state.pendingFiles.length === 0) {
+            showToast('请先选择要上传的文件', 'warn');
+            return;
+        }
+        if (!state.connected) {
+            showToast('请先连接后端服务', 'warn');
+            return;
+        }
+
+        const progressContainer = document.getElementById('upload-progress-container');
+        const progressBar = document.getElementById('upload-progress-bar');
+        const progressText = document.getElementById('upload-progress-text');
+        const uploadBtn = document.getElementById('upload-btn');
+
+        progressContainer.classList.remove('hidden');
+        uploadBtn.disabled = true;
+        uploadBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>上传中...';
+
+        let success = 0, fail = 0;
+        const total = state.pendingFiles.length;
+
+        for (let i = 0; i < total; i++) {
+            const file = state.pendingFiles[i];
+            progressText.textContent = `正在上传 ${file.name} (${i + 1}/${total})`;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+                await apiRequest('/documents/upload', 'POST', formData, true);
+                success++;
+                addLog(`上传成功: ${file.name}`);
+            } catch (err) {
+                fail++;
+                addLog(`上传失败: ${file.name} - ${err.message}`, 'error');
+            }
+
+            const pct = Math.round(((i + 1) / total) * 100);
+            progressBar.style.width = pct + '%';
+        }
+
+        progressText.textContent = `完成！成功 ${success}，失败 ${fail}`;
+        showToast(`上传完成：成功 ${success} 个，失败 ${fail} 个`, fail > 0 ? 'warn' : 'success');
+
+        state.pendingFiles = [];
+        renderPendingFiles();
+
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="fas fa-upload mr-2"></i>上传并索引';
+
+        setTimeout(() => progressContainer.classList.add('hidden'), 3000);
+    }
+
+    async function scanDirectory() {
+        if (!state.connected) { showToast('请先连接后端', 'warn'); return; }
+
+        showToast('开始扫描输入目录...', 'info');
+        addLog('触发目录扫描...');
+
+        try {
+            const result = await apiRequest('/documents/scan', 'POST');
+            showToast(`扫描完成！已索引 ${result.indexed_count || 0} 个新文件`, 'success');
+            addLog(`扫描完成: 索引了 ${result.indexed_count || 0} 个新文件，总计 ${result.total_documents || 0} 个文件`);
+        } catch (err) {
+            showToast(`扫描失败: ${err.message}`, 'error');
+            addLog(`扫描失败: ${err.message}`, 'error');
+        }
+    }
+
+    async function clearDocuments() {
+        if (!state.connected) { showToast('请先连接后端', 'warn'); return; }
+        if (!confirm('确认要清空所有已索引的文档数据吗？此操作不可撤销。')) return;
+
+        try {
+            await apiRequest('/documents', 'DELETE');
+            showToast('文档数据已清空', 'success');
+            addLog('已清空所有文档数据');
+        } catch (err) {
+            showToast(`清空失败: ${err.message}`, 'error');
+            addLog(`清空失败: ${err.message}`, 'error');
+        }
+    }
+
+    // ==================== 文档管理标签页 ====================
+    async function loadDocuments() {
+        if (!state.connected) return;
+
+        const loading = document.getElementById('documents-loading');
+        const tbody = document.getElementById('document-list');
+        loading.classList.remove('hidden');
+
+        try {
+            const healthData = await apiRequest('/health');
+            const files = healthData.indexed_files || [];
+
+            if (files.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-gray-400">
+                    <i class="fas fa-folder-open text-2xl mb-2"></i><p>暂无已索引文件</p></td></tr>`;
+            } else {
+                tbody.innerHTML = files.map((f, i) => {
+                    const fileName = f.split(/[/\\]/).pop();
+                    return `<tr class="border-b hover:bg-gray-50">
+                        <td class="p-3 text-gray-500">${i + 1}</td>
+                        <td class="p-3 text-xs text-gray-500 break-all">${escapeHtml(f)}</td>
+                        <td class="p-3 font-medium">${escapeHtml(fileName)}</td>
+                    </tr>`;
+                }).join('');
+            }
+        } catch (err) {
+            tbody.innerHTML = `<tr><td colspan="3" class="p-6 text-center text-red-400">加载失败: ${escapeHtml(err.message)}</td></tr>`;
+        }
+
+        loading.classList.add('hidden');
+    }
+
+    // ==================== 图谱可视化 ====================
+    async function refreshGraphLabels() {
+        if (!state.connected) { showToast('请先连接后端', 'warn'); return; }
+
+        try {
+            const labels = await apiRequest('/graph/label/list');
+            const select = document.getElementById('graph-label-select');
+            select.innerHTML = '<option value="">-- 请选择 --</option>';
+
+            if (Array.isArray(labels)) {
+                labels.forEach(label => {
+                    const opt = document.createElement('option');
+                    opt.value = label;
+                    opt.textContent = label;
+                    select.appendChild(opt);
+                });
+            }
+            showToast(`获取到 ${Array.isArray(labels) ? labels.length : 0} 个图谱标签`, 'success');
+        } catch (err) {
+            showToast(`获取图谱标签失败: ${err.message}`, 'error');
+        }
+    }
+
+    async function loadGraphByLabel() {
+        const label = document.getElementById('graph-label-select').value;
+        if (!label) return;
+
+        try {
+            showToast('正在加载图谱数据...', 'info');
+            const rawData = await apiRequest(`/graphs?label=${encodeURIComponent(label)}`);
+
+            const nodes = rawData.nodes || [];
+            const edges = rawData.edges || [];
+
+            // 为节点生成唯一 ID
+            const nodeMap = {};
+            const cyElements = [];
+
+            nodes.forEach((node, idx) => {
+                const nodeId = 'n_' + idx;
+                const label = (node.labels && node.labels[0]) || node.id || `Node_${idx}`;
+                nodeMap[label] = nodeId;
+                cyElements.push({
+                    data: {
+                        id: nodeId,
+                        label: label,
+                        type: node.entity_type || node.type || '实体',
+                        description: node.description || ''
+                    }
+                });
+            });
+
+            edges.forEach((edge, idx) => {
+                const sourceLabel = edge.source;
+                const targetLabel = edge.target;
+                const sourceId = nodeMap[sourceLabel];
+                const targetId = nodeMap[targetLabel];
+
+                if (sourceId && targetId) {
+                    cyElements.push({
+                        data: {
+                            id: 'e_' + idx,
+                            source: sourceId,
+                            target: targetId,
+                            type: edge.type || edge.relation || '',
+                            weight: edge.weight || 1
+                        }
+                    });
+                }
+            });
+
+            renderCytoscape(cyElements);
+            document.getElementById('node-count').textContent = nodes.length;
+            document.getElementById('edge-count').textContent = edges.length;
+            showToast(`加载完成: ${nodes.length} 节点, ${edges.length} 边`, 'success');
+
+        } catch (err) {
+            showToast(`加载图谱失败: ${err.message}`, 'error');
+        }
+    }
+
+    function renderCytoscape(elements) {
+        const container = document.getElementById('graph-canvas');
+        container.innerHTML = ''; // 清空占位内容
+
+        if (state.graph) {
+            state.graph.destroy();
+            state.graph = null;
+        }
+
+        // 动态颜色分配
+        const typeColors = [
+            { bg: '#ec4899', border: '#f472b6' },
+            { bg: '#a855f7', border: '#c084fc' },
+            { bg: '#22c55e', border: '#4ade80' },
+            { bg: '#eab308', border: '#facc15' },
+            { bg: '#3b82f6', border: '#60a5fa' },
+            { bg: '#ef4444', border: '#f87171' },
+            { bg: '#f97316', border: '#fb923c' },
+            { bg: '#14b8a6', border: '#2dd4bf' },
+        ];
+        const typeMap = {};
+        let colorIdx = 0;
+        elements.forEach(el => {
+            if (el.data && el.data.type && !el.data.source) {
+                if (!typeMap[el.data.type]) {
+                    typeMap[el.data.type] = typeColors[colorIdx % typeColors.length];
+                    colorIdx++;
+                }
+            }
+        });
+
+        const styleRules = [
+            {
+                selector: 'node',
+                style: {
+                    'label': 'data(label)',
+                    'width': 48, 'height': 48,
+                    'font-size': '10px', 'font-weight': '600',
+                    'text-valign': 'center', 'text-halign': 'center',
+                    'background-color': '#4f46e5', 'color': '#fff',
+                    'border-width': 2, 'border-color': '#6366f1',
+                    'text-wrap': 'ellipsis', 'text-max-width': '80px'
+                }
+            },
+            {
+                selector: 'edge',
+                style: {
+                    'width': 2, 'line-color': '#94a3b8',
+                    'target-arrow-color': '#94a3b8',
+                    'target-arrow-shape': 'triangle',
+                    'curve-style': 'bezier', 'arrow-scale': 1.2,
+                    'label': 'data(type)', 'font-size': '8px',
+                    'text-rotation': 'autorotate', 'color': '#475569'
+                }
+            },
+            { selector: 'node:hover', style: { 'width': 56, 'height': 56, 'font-size': '12px' } },
+        ];
+
+        // 添加类型颜色样式
+        Object.entries(typeMap).forEach(([type, color]) => {
+            styleRules.push({
+                selector: `node[type="${type}"]`,
+                style: { 'background-color': color.bg, 'border-color': color.border }
+            });
+        });
+
+        state.graph = cytoscape({
+            container: container,
+            elements: elements,
+            style: styleRules,
+            layout: {
+                name: 'cose',
+                animate: true,
+                animationDuration: 500,
+                nodeRepulsion: 6000,
+                idealEdgeLength: 100
+            }
+        });
+
+        // 点击节点显示信息
+        state.graph.on('tap', 'node', function(evt) {
+            const data = evt.target.data();
+            showToast(`${data.label} (${data.type}): ${data.description || '无描述'}`, 'info');
+        });
+    }
+
+    function layoutGraph() {
+        if (state.graph) {
+            state.graph.layout({ name: 'cose', animate: true, animationDuration: 500, nodeRepulsion: 6000 }).run();
+        }
+    }
+
+    // ==================== 系统监控 ====================
+    async function loadHealthStatus() {
+        if (!state.connected) return;
+
+        try {
+            const data = await apiRequest('/health');
+            const config = data.configuration || {};
+
+            document.getElementById('monitor-status').textContent = data.status || '-';
+            document.getElementById('monitor-status').className = 'text-xl font-bold ' + (data.status === 'healthy' ? 'text-green-600' : 'text-red-600');
+            document.getElementById('monitor-status-detail').textContent = `工作目录: ${data.working_directory || '-'}`;
+            document.getElementById('monitor-files').textContent = data.indexed_files_count || 0;
+            document.getElementById('monitor-input-dir').textContent = `输入目录: ${data.input_directory || '-'}`;
+            document.getElementById('monitor-llm').textContent = config.llm_model || '-';
+            document.getElementById('monitor-llm-binding').textContent = `绑定: ${config.llm_binding || '-'}`;
+            document.getElementById('monitor-storage').textContent = config.graph_storage || '-';
+            document.getElementById('monitor-storage-detail').textContent = `KV: ${config.kv_storage || '-'} | Vec: ${config.vector_storage || '-'}`;
+
+            // 配置详情
+            const configDetail = document.getElementById('config-detail');
+            configDetail.innerHTML = Object.entries(config).map(([key, value]) => `
+                <div class="flex justify-between py-2 border-b border-gray-100">
+                    <span class="text-gray-600 font-medium">${escapeHtml(key)}</span>
+                    <span class="text-gray-800 break-all text-right max-w-xs">${escapeHtml(String(value))}</span>
+                </div>
+            `).join('');
+
+        } catch (err) {
+            showToast(`获取状态失败: ${err.message}`, 'error');
+        }
+    }
+
+    // ==================== 实体管理 ====================
+    async function refreshEntityLabels() {
+        if (!state.connected) { showToast('请先连接后端', 'warn'); return; }
+
+        try {
+            const labels = await apiRequest('/graph/label/list');
+            const select = document.getElementById('entity-label-select');
+            select.innerHTML = '<option value="">-- 请选择 --</option>';
+
+            if (Array.isArray(labels)) {
+                labels.forEach(label => {
+                    const opt = document.createElement('option');
+                    opt.value = label;
+                    opt.textContent = label;
+                    select.appendChild(opt);
+                });
+            }
+        } catch (err) {
+            showToast(`获取图谱标签失败: ${err.message}`, 'error');
+        }
+    }
+
+    async function loadEntitiesByLabel() {
+        const label = document.getElementById('entity-label-select').value;
+        if (!label) return;
+
+        try {
+            const rawData = await apiRequest(`/graphs?label=${encodeURIComponent(label)}`);
+            const nodes = rawData.nodes || [];
+            const edges = rawData.edges || [];
+
+            state.allEntities = nodes.map((node, idx) => ({
+                name: (node.labels && node.labels[0]) || node.id || `Node_${idx}`,
+                type: node.entity_type || node.type || '实体',
+                description: node.description || '',
+                properties: node.properties || node
+            }));
+            state.allEdges = edges;
+
+            renderEntityList(state.allEntities);
+            showToast(`加载了 ${nodes.length} 个实体`, 'success');
+        } catch (err) {
+            showToast(`加载实体失败: ${err.message}`, 'error');
+        }
+    }
+
+    function filterEntities() {
+        const keyword = document.getElementById('entity-search').value.toLowerCase();
+        const filtered = state.allEntities.filter(e =>
+            e.name.toLowerCase().includes(keyword) ||
+            e.type.toLowerCase().includes(keyword) ||
+            e.description.toLowerCase().includes(keyword)
+        );
+        renderEntityList(filtered);
+    }
+
+    function renderEntityList(entities) {
+        const listContainer = document.getElementById('entity-list');
+        if (entities.length === 0) {
+            listContainer.innerHTML = '<p class="text-center text-gray-400 text-xs py-4">没有找到实体</p>';
+            return;
+        }
+
+        listContainer.innerHTML = entities.map((entity, idx) => {
+            // 计算关联数
+            const relCount = state.allEdges.filter(e => e.source === entity.name || e.target === entity.name).length;
+            return `
+                <div class="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors"
+                     onclick="showEntityDetail(${idx})">
+                    <div class="font-medium text-sm truncate">${escapeHtml(entity.name)}</div>
+                    <div class="text-xs text-gray-500 mt-1">${escapeHtml(entity.type)} · ${relCount} 关系</div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function showEntityDetail(idx) {
+        const entity = state.allEntities[idx];
+        if (!entity) return;
+
+        // 找出相关边
+        const relatedEdges = state.allEdges.filter(e => e.source === entity.name || e.target === entity.name);
+
+        const detail = document.getElementById('entity-detail');
+        detail.innerHTML = `
+            <div class="border-b pb-4 mb-4">
+                <h3 class="text-lg font-bold">${escapeHtml(entity.name)}</h3>
+                <span class="inline-block px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs mt-2">${escapeHtml(entity.type)}</span>
+            </div>
+            <div class="space-y-4">
+                <div>
+                    <h4 class="font-semibold text-sm mb-2">描述</h4>
+                    <p class="text-sm text-gray-600">${escapeHtml(entity.description || '暂无描述')}</p>
+                </div>
+                <div>
+                    <h4 class="font-semibold text-sm mb-2">关联关系 (${relatedEdges.length})</h4>
+                    <div class="space-y-2 max-h-60 overflow-y-auto">
+                        ${relatedEdges.length > 0 ? relatedEdges.map(edge => {
+                            const isSource = edge.source === entity.name;
+                            return `<div class="flex items-center text-sm p-2 bg-gray-50 rounded">
+                                <span class="${isSource ? 'text-indigo-600' : 'text-green-600'}">${isSource ? '→' : '←'}</span>
+                                <span class="ml-2 text-gray-500">${escapeHtml(edge.type || edge.relation || '关联')}</span>
+                                <span class="ml-auto font-medium">${escapeHtml(isSource ? edge.target : edge.source)}</span>
+                            </div>`;
+                        }).join('') : '<p class="text-gray-400 text-xs">暂无关联关系</p>'}
+                    </div>
+                </div>
+                ${entity.properties ? `
+                <div>
+                    <h4 class="font-semibold text-sm mb-2">原始属性</h4>
+                    <pre class="text-xs bg-gray-50 p-3 rounded overflow-auto max-h-40">${escapeHtml(JSON.stringify(entity.properties, null, 2))}</pre>
+                </div>` : ''}
+            </div>
+        `;
+    }
+
+    // ==================== 初始化 ====================
+    document.addEventListener('DOMContentLoaded', function() {
+        // 恢复上次的服务器地址
+        const savedUrl = localStorage.getItem('minirag_server_url');
+        if (savedUrl) {
+            document.getElementById('server-url').value = savedUrl;
+        }
+        const savedKey = localStorage.getItem('minirag_api_key');
+        if (savedKey) {
+            document.getElementById('api-key-input').value = savedKey;
+        }
+
+        // 保存配置变更
+        document.getElementById('server-url').addEventListener('change', function() {
+            localStorage.setItem('minirag_server_url', this.value);
+        });
+        document.getElementById('api-key-input').addEventListener('change', function() {
+            localStorage.setItem('minirag_api_key', this.value);
+        });
+
+        // 自动尝试连接
+        setTimeout(() => checkConnection(), 500);
+    });
+    </script>
+</body>
+</html>
