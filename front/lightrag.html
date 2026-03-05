@@ -1,0 +1,1871 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLM-GraphRAG 系统界面</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <!-- 图谱可视化库 -->
+    <script src="https://cdn.jsdelivr.net/npm/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+    <!-- 图表库 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <style>
+        .chat-container { height: calc(100vh - 280px); min-height: 400px; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .tab-btn.active { border-bottom-color: #4f46e5; color: #4f46e5; }
+        .log-entry { padding: 2px 0; }
+        .log-entry.info { color: #4ade80; }
+        .log-entry.warn { color: #facc15; }
+        .log-entry.error { color: #f87171; }
+
+        /* 文本溢出处理 */
+        .text-ellipsis {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .break-words {
+            overflow-wrap: break-word;
+            word-wrap: break-word;
+            word-break: break-word;
+        }
+        .line-clamp-1 {
+            display: -webkit-box;
+            -webkit-line-clamp: 1;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .line-clamp-2 {
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 font-sans">
+
+    <!-- 顶部导航栏 -->
+    <nav class="bg-indigo-600 text-white p-4 shadow-lg">
+        <div class="container mx-auto flex justify-between items-center">
+            <div class="flex items-center space-x-2">
+                <i class="fas fa-project-diagram text-yellow-300 text-2xl"></i>
+                <span class="text-xl font-bold tracking-tight">SLM-GraphRAG 系统</span>
+            </div>
+            <div class="flex space-x-4 text-sm">
+                <span>状态: <span class="text-green-300">● 系统运行中</span></span>
+                <span><i class="fas fa-server mr-1"></i>本地模式</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 标签页导航 -->
+    <div class="bg-white border-b shadow-sm">
+        <div class="container mx-auto px-4">
+            <div class="flex space-x-1 overflow-x-auto">
+                <button class="tab-btn active py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="chat">
+                    <i class="fas fa-comments mr-2"></i>问答对话
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="graph">
+                    <i class="fas fa-project-diagram mr-2"></i>图谱可视化
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="documents">
+                    <i class="fas fa-file-alt mr-2"></i>文档管理
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="monitor">
+                    <i class="fas fa-chart-line mr-2"></i>系统监控
+                </button>
+                <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="entities">
+                    <i class="fas fa-database mr-2"></i>实体管理
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主内容区域 -->
+    <div class="container mx-auto mt-6 px-4 pb-8">
+        <div class="grid grid-cols-12 gap-6">
+
+            <!-- 左侧边栏（在问答标签页显示） -->
+            <aside id="sidebar" class="col-span-12 md:col-span-3 space-y-6">
+                <!-- 模型配置 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="toggleModelConfig()">
+                        <h3 class="font-bold flex items-center text-sm">
+                            <i class="fas fa-cog mr-2 text-indigo-600"></i> 模型配置
+                        </h3>
+                        <button class="text-indigo-600 hover:text-indigo-800 text-xs">
+                            <i class="fas fa-chevron-down" id="model-config-toggle"></i>
+                        </button>
+                    </div>
+                    <div id="model-config-panel" class="space-y-4">
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">LLM 模型</label>
+                            <select id="llm-model" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option>qwen3:4b-instruct (本地)</option>
+                                <option>phi-4-mini-instruct (本地)</option>
+                                <option>minicpm3-4b (本地)</option>
+                                <option>gpt-4o-mini (API)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">
+                                嵌入模型 (Embedding Model)
+                                <i class="fas fa-info-circle ml-1 text-gray-400" title="用于文本向量化和语义相似度计算"></i>
+                            </label>
+                            <select id="embedding-model" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="all-MiniLM-L6-v2">all-MiniLM-L6-v2 (轻量级)</option>
+                                <option value="bge-small-zh-v1.5">bge-small-zh-v1.5 (中文优化)</option>
+                                <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
+                                <option value="nomic-embed-text">nomic-embed-text (本地)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs text-gray-500 mb-1">检索模式</label>
+                            <select id="retrieval-mode" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                <option value="hybrid">hybrid (混合检索)</option>
+                                <option value="local">local (本地细节)</option>
+                                <option value="naive">naive (普通 RAG)</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 数据管理 -->
+                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                    <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="toggleDataManagement()">
+                        <h3 class="font-bold flex items-center text-sm">
+                            <i class="fas fa-upload mr-2 text-indigo-600"></i> 数据管理
+                        </h3>
+                        <button class="text-indigo-600 hover:text-indigo-800 text-xs">
+                            <i class="fas fa-chevron-down" id="data-management-toggle"></i>
+                        </button>
+                    </div>
+                    <div id="data-management-panel">
+                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()">
+                            <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                            <p class="text-xs text-gray-500">点击或拖拽上传文件</p>
+                            <p class="text-[10px] text-gray-400 mt-1">支持 .txt, .pdf, .md, .docx</p>
+                        </div>
+                        <input type="file" id="file-input" class="hidden" multiple accept=".txt,.pdf,.md,.docx">
+
+                    <!-- 分块配置 -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-sm text-gray-700">
+                                <i class="fas fa-cut mr-2 text-indigo-500"></i>文档分块配置
+                            </h4>
+                            <button onclick="toggleChunkConfig()" class="text-indigo-600 hover:text-indigo-800 text-xs">
+                                <i class="fas fa-chevron-down" id="chunk-config-toggle"></i>
+                            </button>
+                        </div>
+
+                        <div id="chunk-config-panel" class="space-y-3">
+                            <!-- 快速预设 -->
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-2">快速预设</label>
+                                <div class="grid grid-cols-4 gap-2">
+                                    <button onclick="setChunkPreset(512, 50)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">
+                                        精细
+                                    </button>
+                                    <button onclick="setChunkPreset(1200, 100)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors bg-indigo-50 border-indigo-300">
+                                        平衡
+                                    </button>
+                                    <button onclick="setChunkPreset(2048, 200)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">
+                                        粗粒度
+                                    </button>
+                                    <button onclick="setChunkPreset(4096, 400)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">
+                                        长文档
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 自定义配置 -->
+                            <div class="grid grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">
+                                        块大小 (tokens)
+                                        <i class="fas fa-info-circle ml-1 text-gray-400" title="每个文本块的最大token数"></i>
+                                    </label>
+                                    <input type="number" id="chunk-size" value="1200" min="256" max="8192" step="64"
+                                        class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        onchange="updateChunkDisplay()">
+                                    <p class="text-[10px] text-gray-400 mt-1">建议: 512-4096</p>
+                                </div>
+                                <div>
+                                    <label class="block text-xs text-gray-500 mb-1">
+                                        重叠窗口 (tokens)
+                                        <i class="fas fa-info-circle ml-1 text-gray-400" title="相邻块之间的重叠token数，确保上下文连续性"></i>
+                                    </label>
+                                    <input type="number" id="chunk-overlap" value="100" min="0" max="1024" step="10"
+                                        class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                                        onchange="updateChunkDisplay()">
+                                    <p class="text-[10px] text-gray-400 mt-1">建议: 10-20% 块大小</p>
+                                </div>
+                            </div>
+
+                            <!-- 配置预览 -->
+                            <div class="bg-gray-50 rounded-lg p-3">
+                                <div class="flex items-center justify-between text-xs">
+                                    <span class="text-gray-600">预估分块数 (1MB文档):</span>
+                                    <span class="font-semibold text-indigo-600" id="estimated-chunks">~850 块</span>
+                                </div>
+                                <div class="flex items-center justify-between text-xs mt-1">
+                                    <span class="text-gray-600">重叠率:</span>
+                                    <span class="font-semibold text-gray-700" id="overlap-ratio">8.3%</span>
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-2">
+                                    <i class="fas fa-lightbulb mr-1"></i>
+                                    <span id="chunk-tip">平衡设置，适合大多数文档类型</span>
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 知识图谱导入 -->
+                    <div class="mt-4 pt-4 border-t border-gray-200">
+                        <div class="flex items-center justify-between mb-3">
+                            <h4 class="font-semibold text-sm text-gray-700">
+                                <i class="fas fa-project-diagram mr-2 text-purple-500"></i>导入知识图谱
+                            </h4>
+                            <button onclick="toggleGraphImport()" class="text-indigo-600 hover:text-indigo-800 text-xs">
+                                <i class="fas fa-chevron-right" id="graph-import-toggle"></i>
+                            </button>
+                        </div>
+
+                        <div id="graph-import-panel" class="space-y-3" style="display: none;">
+                            <!-- 格式选择 -->
+                            <div>
+                                <label class="block text-xs text-gray-500 mb-2">图谱格式</label>
+                                <div class="grid grid-cols-3 gap-2">
+                                    <button onclick="selectGraphFormat('json')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left">
+                                        <i class="fas fa-code mb-1 block"></i>
+                                        JSON
+                                        <span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">通用格式</span>
+                                    </button>
+                                    <button onclick="selectGraphFormat('graphml')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left">
+                                        <i class="fas fa-sitemap mb-1 block"></i>
+                                        GraphML
+                                        <span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">Gephi/NetworkX</span>
+                                    </button>
+                                    <button onclick="selectGraphFormat('csv')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left">
+                                        <i class="fas fa-table mb-1 block"></i>
+                                        CSV
+                                        <span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">实体关系表</span>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- 文件上传 -->
+                            <div class="border-2 border-dashed border-purple-200 rounded-lg p-4 text-center hover:border-purple-400 transition-colors cursor-pointer" onclick="document.getElementById('graph-file-input').click()">
+                                <i class="fas fa-file-import text-purple-400 text-xl mb-2"></i>
+                                <p class="text-xs text-gray-600">选择图谱文件</p>
+                                <p class="text-[10px] text-gray-400 mt-1">.json, .graphml, .csv</p>
+                            </div>
+                            <input type="file" id="graph-file-input" class="hidden" accept=".json,.graphml,.csv,.xml">
+
+                            <!-- 格式说明 -->
+                            <div class="bg-purple-50 rounded-lg p-3 overflow-hidden">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-semibold text-purple-800 whitespace-nowrap">格式要求</span>
+                                    <button onclick="showFormatExample()" class="text-[10px] text-purple-600 hover:text-purple-800 whitespace-nowrap ml-2">
+                                        <i class="fas fa-eye mr-1"></i>查看示例
+                                    </button>
+                                </div>
+                                <div id="format-description" class="text-[10px] text-gray-600 break-words leading-relaxed">
+                                    请选择一种图谱格式以查看详细要求
+                                </div>
+                            </div>
+
+                            <!-- 导入统计 -->
+                            <div id="import-stats" class="hidden bg-green-50 rounded-lg p-3">
+                                <div class="flex items-center text-green-700 mb-2">
+                                    <i class="fas fa-check-circle mr-2"></i>
+                                    <span class="text-xs font-semibold">导入成功</span>
+                                </div>
+                                <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                    <div>
+                                        <span class="text-gray-600">实体节点:</span>
+                                        <span class="font-semibold text-green-700" id="import-nodes">0</span>
+                                    </div>
+                                    <div>
+                                        <span class="text-gray-600">关系边:</span>
+                                        <span class="font-semibold text-green-700" id="import-edges">0</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button onclick="importGraph()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
+                                <i class="fas fa-upload mr-2"></i>导入图谱
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                        <button class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                            <i class="fas fa-sync-alt mr-2"></i>构建索引
+                        </button>
+                        <button class="w-full border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                            <i class="fas fa-trash-alt mr-2"></i>清空数据
+                        </button>
+                    </div>
+                </div>
+            </aside>
+
+            <!-- 主内容区 -->
+            <main class="col-span-12 md:col-span-9">
+
+                <!-- 问答对话标签页 -->
+                <div id="chat-tab" class="tab-content active">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                        <div class="chat-container overflow-y-auto p-6 space-y-4 bg-gray-50" id="chat-box">
+                            <div class="flex items-start">
+                                <div class="bg-indigo-100 text-indigo-800 p-4 rounded-lg max-w-2xl text-sm">
+                                    <p class="font-semibold mb-2">👋 你好！我是 SLM-GraphRAG 助手</p>
+                                    <p>基于小型语言模型的图基增强检索生成系统。我可以：</p>
+                                    <ul class="mt-2 space-y-1 text-xs">
+                                        <li>• 回答基于知识图谱的复杂问题</li>
+                                        <li>• 展示推理路径和引用来源</li>
+                                        <li>• 支持多跳推理和语义检索</li>
+                                    </ul>
+                                    <p class="mt-2 text-xs text-indigo-600">请上传文档或直接向我提问！</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="p-4 border-t bg-white">
+                            <div class="relative flex items-center">
+                                <input type="text" id="user-input" placeholder="输入您的问题... 例如：'上周三我和谁讨论了项目进度？'" class="w-full border rounded-full py-3 px-6 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner">
+                                <button onclick="sendMessage()" class="absolute right-2 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors">
+                                    <i class="fas fa-paper-plane"></i>
+                                </button>
+                            </div>
+                            <div class="flex justify-between mt-3 text-[10px] text-gray-400 px-2">
+                                <span>Token 消耗: <span id="token-count">0</span></span>
+                                <span>检索耗时: <span id="retrieval-time">0</span>ms</span>
+                                <span>生成耗时: <span id="generation-time">0</span>ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 图谱可视化标签页 -->
+                <div id="graph-tab" class="tab-content">
+                    <div class="grid grid-cols-12 gap-6">
+                        <aside class="col-span-3">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="font-bold mb-4 text-sm">图谱控制</h3>
+                                <div class="space-y-3">
+                                    <div>
+                                        <input type="text" id="graph-search" placeholder="搜索节点..." class="w-full border rounded p-2 text-sm">
+                                    </div>
+                                    <button onclick="layoutGraph()" class="w-full bg-indigo-600 text-white py-2 rounded text-sm hover:bg-indigo-700">
+                                        <i class="fas fa-redo mr-2"></i>重新布局
+                                    </button>
+                                    <button onclick="exportGraph()" class="w-full border border-indigo-600 text-indigo-600 py-2 rounded text-sm hover:bg-indigo-50">
+                                        <i class="fas fa-download mr-2"></i>导出图谱
+                                    </button>
+                                    <div class="pt-2 border-t">
+                                        <p class="text-xs text-gray-500 mb-2">图统计</p>
+                                        <div class="text-xs space-y-1">
+                                            <p>节点数: <span class="font-semibold text-indigo-600" id="node-count">0</span></p>
+                                            <p>边数: <span class="font-semibold text-indigo-600" id="edge-count">0</span></p>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </aside>
+                        <main class="col-span-9">
+                            <div id="graph-canvas" class="bg-slate-300 rounded-xl border border-slate-400" style="height: 600px;"></div>
+                        </main>
+                    </div>
+                </div>
+
+                <!-- 文档管理标签页 -->
+                <div id="documents-tab" class="tab-content">
+                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-lg font-bold">文档列表</h2>
+                            <div class="flex space-x-2">
+                                <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                                    <i class="fas fa-upload mr-1"></i>上传文档
+                                </button>
+                                <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                                    <i class="fas fa-sync-alt mr-1"></i>刷新
+                                </button>
+                            </div>
+                        </div>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-sm">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="text-left p-3 font-semibold">文件名</th>
+                                        <th class="text-left p-3 font-semibold">大小</th>
+                                        <th class="text-left p-3 font-semibold">上传时间</th>
+                                        <th class="text-left p-3 font-semibold">状态</th>
+                                        <th class="text-center p-3 font-semibold">索引统计</th>
+                                        <th class="text-center p-3 font-semibold">操作</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="document-list">
+                                    <!-- 动态生成文档列表 -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 系统监控标签页 -->
+                <div id="monitor-tab" class="tab-content">
+                    <div class="space-y-6">
+                        <!-- 核心指标卡片 -->
+                        <div class="grid grid-cols-4 gap-4">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">图谱规模</p>
+                                        <p class="text-2xl font-bold text-indigo-600" id="monitor-nodes">1,234</p>
+                                        <p class="text-xs text-gray-400">节点 / <span id="monitor-edges">3,456</span> 边</p>
+                                    </div>
+                                    <i class="fas fa-project-diagram text-3xl text-indigo-200"></i>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">总查询数</p>
+                                        <p class="text-2xl font-bold text-green-600" id="monitor-queries">856</p>
+                                        <p class="text-xs text-gray-400">今日: <span id="monitor-today">42</span></p>
+                                    </div>
+                                    <i class="fas fa-comments text-3xl text-green-200"></i>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">平均响应</p>
+                                        <p class="text-2xl font-bold text-yellow-600" id="monitor-latency">1.2s</p>
+                                        <p class="text-xs text-gray-400">P95: <span id="monitor-p95">2.1s</span></p>
+                                    </div>
+                                    <i class="fas fa-clock text-3xl text-yellow-200"></i>
+                                </div>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <div class="flex items-center justify-between">
+                                    <div>
+                                        <p class="text-xs text-gray-500">内存使用</p>
+                                        <p class="text-2xl font-bold text-purple-600" id="monitor-memory">6.2 GB</p>
+                                        <p class="text-xs text-gray-400">GPU: <span id="monitor-gpu">3.1 GB</span></p>
+                                    </div>
+                                    <i class="fas fa-memory text-3xl text-purple-200"></i>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 图表区域 -->
+                        <div class="grid grid-cols-2 gap-6">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="font-bold text-sm mb-4">查询响应时间趋势</h3>
+                                <canvas id="latency-chart" height="200"></canvas>
+                            </div>
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="font-bold text-sm mb-4">每日查询量统计</h3>
+                                <canvas id="queries-chart" height="200"></canvas>
+                            </div>
+                        </div>
+
+                        <!-- 实时日志 -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                            <h3 class="font-bold text-sm mb-4">
+                                <i class="fas fa-terminal mr-2"></i>系统日志
+                            </h3>
+                            <div id="system-log" class="bg-gray-900 text-green-400 p-4 rounded-lg font-mono text-xs h-64 overflow-y-auto">
+                                <!-- 动态生成日志 -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 实体管理标签页 -->
+                <div id="entities-tab" class="tab-content">
+                    <div class="grid grid-cols-12 gap-6">
+                        <aside class="col-span-4">
+                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                                <h3 class="font-bold mb-4 text-sm">实体搜索</h3>
+                                <input type="text" id="entity-search" placeholder="搜索实体..." class="w-full border rounded p-2 text-sm mb-4">
+                                <div class="flex space-x-2 mb-4">
+                                    <select class="flex-1 border rounded p-2 text-sm">
+                                        <option>所有类型</option>
+                                        <option>人物</option>
+                                        <option>组织</option>
+                                        <option>地点</option>
+                                        <option>概念</option>
+                                    </select>
+                                </div>
+                                <div id="entity-list" class="space-y-2 max-h-96 overflow-y-auto">
+                                    <!-- 动态生成实体列表 -->
+                                </div>
+                            </div>
+                        </aside>
+                        <main class="col-span-8">
+                            <div id="entity-detail" class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                                <div class="text-center text-gray-400 py-12">
+                                    <i class="fas fa-mouse-pointer text-4xl mb-4"></i>
+                                    <p>请从左侧选择一个实体查看详情</p>
+                                </div>
+                            </div>
+                        </main>
+                    </div>
+                </div>
+
+            </main>
+        </div>
+    </div>
+
+    <script>
+        // ==================== 全局状态 ====================
+        const state = {
+            documents: [],
+            entities: [],
+            logs: [],
+            graph: null,
+            charts: {},
+            chunkConfig: {
+                size: 1200,
+                overlap: 100
+            },
+            importedGraph: null,
+            selectedGraphFormat: null
+        };
+
+        // ==================== 标签页切换 ====================
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const tabName = this.dataset.tab;
+
+                // 更新按钮状态
+                document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                // 更新内容显示
+                document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+                document.getElementById(tabName + '-tab').classList.add('active');
+
+                // 特定标签页初始化
+                if (tabName === 'graph') initGraph();
+                if (tabName === 'monitor') initCharts();
+                if (tabName === 'documents') renderDocuments();
+                if (tabName === 'entities') renderEntities();
+
+                // 控制侧边栏显示
+                const sidebar = document.getElementById('sidebar');
+                if (tabName === 'chat') {
+                    sidebar.style.display = 'block';
+                } else {
+                    sidebar.style.display = 'none';
+                }
+            });
+        });
+
+        // ==================== 分块配置功能 ====================
+        function toggleChunkConfig() {
+            const panel = document.getElementById('chunk-config-panel');
+            const toggle = document.getElementById('chunk-config-toggle');
+            const isHidden = panel.style.display === 'none';
+
+            if (isHidden) {
+                panel.style.display = 'block';
+                toggle.className = 'fas fa-chevron-down';
+            } else {
+                panel.style.display = 'none';
+                toggle.className = 'fas fa-chevron-right';
+            }
+        }
+
+        function setChunkPreset(size, overlap) {
+            document.getElementById('chunk-size').value = size;
+            document.getElementById('chunk-overlap').value = overlap;
+            state.chunkConfig.size = size;
+            state.chunkConfig.overlap = overlap;
+
+            // 更新预设按钮高亮
+            document.querySelectorAll('.chunk-preset').forEach(btn => {
+                btn.classList.remove('bg-indigo-50', 'border-indigo-300');
+            });
+            event.target.classList.add('bg-indigo-50', 'border-indigo-300');
+
+            updateChunkDisplay();
+        }
+
+        function updateChunkDisplay() {
+            const size = parseInt(document.getElementById('chunk-size').value) || 1200;
+            const overlap = parseInt(document.getElementById('chunk-overlap').value) || 100;
+
+            state.chunkConfig.size = size;
+            state.chunkConfig.overlap = overlap;
+
+            // 更新预估分块数（假设1MB文档约100万字符，约25万tokens）
+            const docTokens = 250000;
+            const effectiveChunkSize = size - overlap;
+            const estimatedChunks = Math.ceil(docTokens / effectiveChunkSize);
+            document.getElementById('estimated-chunks').textContent = `~${estimatedChunks.toLocaleString()} 块`;
+
+            // 更新重叠率
+            const overlapRatio = ((overlap / size) * 100).toFixed(1);
+            document.getElementById('overlap-ratio').textContent = `${overlapRatio}%`;
+
+            // 更新提示信息
+            const tipEl = document.getElementById('chunk-tip');
+            if (size <= 512) {
+                tipEl.textContent = '精细分块，适合检索具体细节，但会增加检索复杂度';
+            } else if (size <= 1200) {
+                tipEl.textContent = '平衡设置，适合大多数文档类型和查询场景';
+            } else if (size <= 2048) {
+                tipEl.textContent = '粗粒度分块，适合处理长文档和宏观问题';
+            } else {
+                tipEl.textContent = '超大分块，适合总结性任务，但可能影响细节检索';
+            }
+        }
+
+        // ==================== 模型配置折叠功能 ====================
+        function toggleModelConfig() {
+            const panel = document.getElementById('model-config-panel');
+            const toggle = document.getElementById('model-config-toggle');
+            const isHidden = panel.style.display === 'none';
+
+            if (!isHidden) {
+                panel.style.display = 'none';
+                toggle.className = 'fas fa-chevron-right';
+            } else {
+                panel.style.display = 'block';
+                toggle.className = 'fas fa-chevron-down';
+            }
+        }
+
+        // ==================== 数据管理折叠功能 ====================
+        function toggleDataManagement() {
+            const panel = document.getElementById('data-management-panel');
+            const toggle = document.getElementById('data-management-toggle');
+            const isHidden = panel.style.display === 'none';
+
+            if (!isHidden) {
+                panel.style.display = 'none';
+                toggle.className = 'fas fa-chevron-right';
+            } else {
+                panel.style.display = 'block';
+                toggle.className = 'fas fa-chevron-down';
+            }
+        }
+
+        // ==================== 知识图谱导入功能 ====================
+        const graphFormatDescriptions = {
+            json: {
+                title: 'JSON 格式',
+                description: '通用的 JSON 图谱格式，包含节点和边数组',
+                example: `{
+  "nodes": [
+    {"id": "entity1", "name": "实体1", "type": "人物", "description": "..."},
+    {"id": "entity2", "name": "实体2", "type": "组织", "description": "..."}
+  ],
+  "edges": [
+    {"source": "entity1", "target": "entity2", "relation": "属于", "weight": 0.9}
+  ]
+}`
+            },
+            graphml: {
+                title: 'GraphML 格式',
+                description: 'Gephi、NetworkX 等工具使用的标准图格式',
+                example: `<?xml version="1.0" encoding="UTF-8"?>
+<graphml>
+  <graph id="G" edgedefault="directed">
+    <node id="entity1"/>
+    <node id="entity2"/>
+    <edge source="entity1" target="entity2"/>
+  </graph>
+</graphml>`
+            },
+            csv: {
+                title: 'CSV 格式',
+                description: '实体和关系分别用 CSV 文件存储',
+                example: `实体文件 (entities.csv):
+id,name,type,description
+entity1,张三,人物,项目成员
+entity2,项目A,组织,研发项目
+
+关系文件 (relations.csv):
+source,target,relation,weight
+entity1,entity2,参与,0.95`
+            }
+        };
+
+        function toggleGraphImport() {
+            const panel = document.getElementById('graph-import-panel');
+            const toggle = document.getElementById('graph-import-toggle');
+            const isHidden = panel.style.display === 'none' || panel.style.display === '';
+
+            if (!isHidden) {
+                panel.style.display = 'none';
+                toggle.className = 'fas fa-chevron-right';
+            } else {
+                panel.style.display = 'block';
+                toggle.className = 'fas fa-chevron-down';
+            }
+        }
+
+        function selectGraphFormat(format) {
+            state.selectedGraphFormat = format;
+
+            // 更新按钮高亮
+            document.querySelectorAll('.graph-format-btn').forEach(btn => {
+                btn.classList.remove('bg-purple-50', 'border-purple-300');
+            });
+            event.target.closest('.graph-format-btn').classList.add('bg-purple-50', 'border-purple-300');
+
+            // 更新格式说明
+            const info = graphFormatDescriptions[format];
+            document.getElementById('format-description').innerHTML = `
+                <div class="font-semibold text-purple-700 mb-1">${info.title}</div>
+                <p class="mb-2">${info.description}</p>
+                <button onclick="toggleFormatExample()" class="text-purple-600 hover:text-purple-800">
+                    <i class="fas fa-file-code mr-1"></i>查看格式示例
+                </button>
+            `;
+        }
+
+        function toggleFormatExample() {
+            if (!state.selectedGraphFormat) {
+                alert('请先选择一种图谱格式');
+                return;
+            }
+
+            const info = graphFormatDescriptions[state.selectedGraphFormat];
+            const exampleWindow = window.open('', '_blank', 'width=600,height=400');
+            exampleWindow.document.write(`
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <title>${info.title}示例</title>
+                    <style>
+                        body { font-family: monospace; padding: 20px; background: #f5f5f5; }
+                        pre { background: white; padding: 15px; border-radius: 5px; overflow-x: auto; }
+                    </style>
+                </head>
+                <body>
+                    <h2>${info.title}格式示例</h2>
+                    <p>${info.description}</p>
+                    <pre>${info.example}</pre>
+                    <p><a href="#" onclick="window.close(); return false;">关闭窗口</a></p>
+                </body>
+                </html>
+            `);
+        }
+
+        function importGraph() {
+            const fileInput = document.getElementById('graph-file-input');
+
+            if (!fileInput.files || fileInput.files.length === 0) {
+                alert('请先选择要导入的图谱文件');
+                return;
+            }
+
+            if (!state.selectedGraphFormat) {
+                alert('请先选择图谱格式');
+                return;
+            }
+
+            const file = fileInput.files[0];
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                try {
+                    const content = e.target.result;
+                    let graphData;
+
+                    // 根据格式解析
+                    switch (state.selectedGraphFormat) {
+                        case 'json':
+                            graphData = JSON.parse(content);
+                            break;
+                        case 'graphml':
+                            graphData = parseGraphML(content);
+                            break;
+                        case 'csv':
+                            graphData = parseCSV(content);
+                            break;
+                    }
+
+                    // 显示导入统计
+                    const nodeCount = graphData.nodes ? graphData.nodes.length : 0;
+                    const edgeCount = graphData.edges ? graphData.edges.length : 0;
+
+                    document.getElementById('import-nodes').textContent = nodeCount.toLocaleString();
+                    document.getElementById('import-edges').textContent = edgeCount.toLocaleString();
+                    document.getElementById('import-stats').classList.remove('hidden');
+
+                    // 更新全局状态
+                    state.importedGraph = graphData;
+
+                    // 提示成功
+                    alert(`图谱导入成功！\n节点: ${nodeCount}\n边: ${edgeCount}\n\n您可以前往"图谱可视化"页面查看导入的图谱。`);
+
+                } catch (error) {
+                    alert('导入失败：' + error.message);
+                }
+            };
+
+            reader.readAsText(file);
+        }
+
+        function parseGraphML(graphmlContent) {
+            const parser = new DOMParser();
+            const xmlDoc = parser.parseFromString(graphmlContent, 'text/xml');
+            const nodes = [];
+            const edges = [];
+
+            const nodeElements = xmlDoc.getElementsByTagName('node');
+            const edgeElements = xmlDoc.getElementsByTagName('edge');
+
+            // 解析节点
+            for (let i = 0; i < nodeElements.length; i++) {
+                const nodeEl = nodeElements[i];
+                let nodeId = nodeEl.getAttribute('id');
+
+                // 移除引号（如果存在）
+                nodeId = nodeId.replace(/"/g, '');
+
+                const nodeData = {
+                    id: nodeId,
+                    name: nodeId,
+                    type: 'default',
+                    description: ''
+                };
+
+                // 解析节点的 data 元素
+                const dataElements = nodeEl.getElementsByTagName('data');
+                for (let j = 0; j < dataElements.length; j++) {
+                    const dataEl = dataElements[j];
+                    const key = dataEl.getAttribute('key');
+                    const value = dataEl.textContent.replace(/"/g, '');
+
+                    switch (key) {
+                        case 'd0': // entity_type
+                            nodeData.type = value;
+                            break;
+                        case 'd1': // description
+                            nodeData.description = value;
+                            break;
+                        case 'd2': // source_id
+                            nodeData.source_id = value;
+                            break;
+                    }
+                }
+
+                // 清理描述，只保留前100个字符
+                if (nodeData.description.length > 100) {
+                    nodeData.description = nodeData.description.substring(0, 100) + '...';
+                }
+
+                nodes.push(nodeData);
+            }
+
+            // 解析边
+            for (let i = 0; i < edgeElements.length; i++) {
+                const edgeEl = edgeElements[i];
+                let source = edgeEl.getAttribute('source');
+                let target = edgeEl.getAttribute('target');
+
+                // 移除引号
+                source = source.replace(/"/g, '');
+                target = target.replace(/"/g, '');
+
+                const edgeData = {
+                    source: source,
+                    target: target,
+                    relation: 'related',
+                    weight: 1.0,
+                    description: '',
+                    keywords: ''
+                };
+
+                // 解析边的 data 元素
+                const dataElements = edgeEl.getElementsByTagName('data');
+                for (let j = 0; j < dataElements.length; j++) {
+                    const dataEl = dataElements[j];
+                    const key = dataEl.getAttribute('key');
+                    const value = dataEl.textContent.replace(/"/g, '');
+
+                    switch (key) {
+                        case 'd3': // weight
+                            edgeData.weight = parseFloat(value);
+                            break;
+                        case 'd4': // description
+                            edgeData.description = value;
+                            break;
+                        case 'd5': // keywords
+                            edgeData.keywords = value;
+                            edgeData.relation = value;
+                            break;
+                        case 'd6': // source_id
+                            edgeData.source_id = value;
+                            break;
+                    }
+                }
+
+                edges.push(edgeData);
+            }
+
+            console.log(`解析完成: ${nodes.length} 个节点, ${edges.length} 条边`);
+            return { nodes, edges };
+        }
+
+        function parseCSV(csvContent) {
+            // 简化的 CSV 解析（假设包含节点和边）
+            const lines = csvContent.split('\n').filter(line => line.trim());
+            const nodes = [];
+            const edges = [];
+
+            lines.forEach((line, index) => {
+                if (index === 0) return; // 跳过标题行
+                const parts = line.split(',');
+                if (parts.length >= 2) {
+                    nodes.push({ id: parts[0], name: parts[1] || parts[0] });
+                }
+                if (parts.length >= 3 && parts[0] !== parts[1]) {
+                    edges.push({ source: parts[0], target: parts[1], relation: parts[2] || 'related' });
+                }
+            });
+
+            return { nodes, edges };
+        }
+
+        // ==================== 问答功能 ====================
+        function sendMessage() {
+            const input = document.getElementById('user-input');
+            const chatBox = document.getElementById('chat-box');
+            if (!input.value.trim()) return;
+
+            const query = input.value;
+
+            // 用户消息
+            const userMsg = `
+                <div class="flex justify-end mb-4">
+                    <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-sm max-w-2xl text-sm shadow-md">
+                        ${query}
+                    </div>
+                </div>
+            `;
+            chatBox.innerHTML += userMsg;
+            input.value = '';
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 模拟思考状态
+            const thinkingId = 'thinking-' + Date.now();
+            const thinkingMsg = `
+                <div id="${thinkingId}" class="flex items-start mb-4">
+                    <div class="bg-white border p-4 rounded-2xl rounded-tl-sm max-w-2xl text-sm shadow-sm">
+                        <div class="flex items-center space-x-2 text-gray-500">
+                            <i class="fas fa-spinner fa-spin"></i>
+                            <span>正在检索知识图谱...</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            chatBox.innerHTML += thinkingMsg;
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            // 模拟延迟后回复
+            setTimeout(() => {
+                document.getElementById(thinkingId).remove();
+
+                const response = generateMockResponse(query);
+                const aiMsg = `
+                    <div class="flex items-start mb-4">
+                        <div class="bg-white border p-4 rounded-2xl rounded-tl-sm max-w-2xl text-sm shadow-sm">
+                            <div class="text-gray-700 mb-4">${response.answer}</div>
+
+                            <!-- 检索路径 -->
+                            <div class="mt-4 p-3 bg-indigo-50 rounded-lg">
+                                <div class="flex items-center justify-between mb-2">
+                                    <span class="text-xs font-semibold text-indigo-800">
+                                        <i class="fas fa-route mr-2"></i>检索路径
+                                    </span>
+                                    <span class="text-[10px] text-gray-500">耗时: ${response.retrievalTime}ms</span>
+                                </div>
+                                <div class="flex items-center flex-wrap gap-2 text-xs">
+                                    ${response.path.map((p, i) => `
+                                        <span class="px-2 py-1 bg-white rounded-full border">${p}</span>
+                                        ${i < response.path.length - 1 ? '<i class="fas fa-arrow-right text-gray-400"></i>' : ''}
+                                    `).join('')}
+                                </div>
+                            </div>
+
+                            <!-- 性能统计 -->
+                            <div class="mt-3 pt-3 border-t flex justify-between text-[10px] text-gray-500">
+                                <span>Token: ${response.tokens}</span>
+                                <span>检索: ${response.retrievalTime}ms</span>
+                                <span>生成: ${response.generationTime}ms</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                chatBox.innerHTML += aiMsg;
+                chatBox.scrollTop = chatBox.scrollHeight;
+
+                // 更新统计
+                document.getElementById('token-count').textContent = response.tokens;
+                document.getElementById('retrieval-time').textContent = response.retrievalTime;
+                document.getElementById('generation-time').textContent = response.generationTime;
+            }, 1500);
+        }
+
+        function generateMockResponse(query) {
+            const responses = {
+                'default': {
+                    answer: `根据知识图谱检索结果，我找到了与"${query}"相关的信息。系统通过验证优先的实体关系抽取方法构建了知识图谱，并使用语义引导的路径检索算法定位了关键信息节点。<br><br>该回答基于 <strong>Semantic-Flow RAG</strong> 方法生成，整合了多个相关文档的内容，确保了回答的准确性和完整性。`,
+                    path: ['查询实体', '关联关系', '答案节点'],
+                    retrievalTime: Math.floor(Math.random() * 500 + 800),
+                    generationTime: Math.floor(Math.random() * 300 + 400),
+                    tokens: Math.floor(Math.random() * 500 + 800)
+                }
+            };
+            return responses.default;
+        }
+
+        // ==================== 图谱可视化 ====================
+        function initGraph() {
+            // 如果图谱已存在，先销毁以便重新加载导入的数据
+            if (state.graph) {
+                state.graph.destroy();
+                state.graph = null;
+            }
+
+            const container = document.getElementById('graph-canvas');
+
+            // 使用导入的图谱数据或模拟数据
+            let elements;
+
+            if (state.importedGraph && state.importedGraph.nodes && state.importedGraph.nodes.length > 0) {
+                console.log('使用导入的图谱数据:', state.importedGraph);
+
+                // 转换导入的数据为 Cytoscape 格式
+                elements = [];
+
+                // 转换节点
+                state.importedGraph.nodes.forEach(node => {
+                    elements.push({
+                        data: {
+                            id: node.id || node.name,
+                            label: node.label || node.name || node.id,
+                            type: node.type || 'default',
+                            // 保留原始数据
+                            _original: node
+                        }
+                    });
+                });
+
+                // 转换边
+                state.importedGraph.edges.forEach(edge => {
+                    if (edge.source && edge.target) {
+                        elements.push({
+                            data: {
+                                source: edge.source,
+                                target: edge.target,
+                                weight: edge.weight || 1,
+                                relation: edge.relation || edge.label || 'related',
+                                _original: edge
+                            }
+                        });
+                    }
+                });
+
+                console.log('转换后的元素数量:', elements.length);
+            } else {
+                // 模拟图谱数据
+                console.log('使用模拟图谱数据');
+                elements = [
+                // 节点
+                { data: { id: 'qwen', label: 'Qwen', type: '模型' } },
+                { data: { id: 'phi', label: 'Phi-4', type: '模型' } },
+                { data: { id: 'minicpm', label: 'MiniCPM', type: '模型' } },
+                { data: { id: 'rag', label: 'RAG', type: '技术' } },
+                { data: { id: 'graph', label: '知识图谱', type: '技术' } },
+                { data: { id: 'vf-ere', label: 'VF-ERE', type: '方法' } },
+                { data: { id: 'semantic-flow', label: 'Semantic-Flow', type: '方法' } },
+                { data: { id: 'entity', label: '实体抽取', type: '任务' } },
+                { data: { id: 'retrieval', label: '路径检索', type: '任务' } },
+                { data: { id: 'generation', label: '答案生成', type: '任务' } },
+                // 边
+                { data: { source: 'qwen', target: 'rag', weight: 0.9 } },
+                { data: { source: 'phi', target: 'rag', weight: 0.85 } },
+                { data: { source: 'minicpm', target: 'rag', weight: 0.88 } },
+                { data: { source: 'rag', target: 'graph', weight: 0.95 } },
+                { data: { source: 'graph', target: 'vf-ere', weight: 0.92 } },
+                { data: { source: 'graph', target: 'semantic-flow', weight: 0.90 } },
+                { data: { source: 'vf-ere', target: 'entity', weight: 0.87 } },
+                { data: { source: 'semantic-flow', target: 'retrieval', weight: 0.91 } },
+                { data: { source: 'retrieval', target: 'generation', weight: 0.89 } },
+                ];
+            }
+
+            // 节点配色方案 - 支持多种实体类型
+            const nodeColors = {
+                // 中文类型
+                '模型': {
+                    background: '#ec4899',      // 粉色
+                    border: '#f472b6',
+                    text: '#ffffff',
+                    label: '模型'
+                },
+                '技术': {
+                    background: '#a855f7',      // 紫色
+                    border: '#c084fc',
+                    text: '#ffffff',
+                    label: '技术'
+                },
+                '方法': {
+                    background: '#22c55e',      // 绿色
+                    border: '#4ade80',
+                    text: '#ffffff',
+                    label: '方法'
+                },
+                '任务': {
+                    background: '#eab308',      // 黄色
+                    border: '#facc15',
+                    text: '#1f2937',           // 深色文字
+                    label: '任务'
+                },
+                '人物': {
+                    background: '#ec4899',      // 粉色
+                    border: '#f472b6',
+                    text: '#ffffff',
+                    label: '人物'
+                },
+                '地点': {
+                    background: '#a855f7',      // 紫色
+                    border: '#c084fc',
+                    text: '#ffffff',
+                    label: '地点'
+                },
+                '活动': {
+                    background: '#22c55e',      // 绿色
+                    border: '#4ade80',
+                    text: '#ffffff',
+                    label: '活动'
+                },
+                '物品': {
+                    background: '#eab308',      // 黄色
+                    border: '#facc15',
+                    text: '#1f2937',           // 深色文字
+                    label: '物品'
+                },
+                '组织': {
+                    background: '#f97316',      // 橙色
+                    border: '#fb923c',
+                    text: '#ffffff',
+                    label: '组织'
+                },
+                '事件': {
+                    background: '#ef4444',      // 红色
+                    border: '#f87171',
+                    text: '#ffffff',
+                    label: '事件'
+                },
+                '概念': {
+                    background: '#06b6d4',      // 青色
+                    border: '#22d3ee',
+                    text: '#ffffff',
+                    label: '概念'
+                },
+                // 英文类型（GraphML 中使用）
+                'PERSON': {
+                    background: '#ec4899',      // 粉色
+                    border: '#f472b6',
+                    text: '#ffffff',
+                    label: '人物'
+                },
+                'ORGANIZATION': {
+                    background: '#f97316',      // 橙色
+                    border: '#fb923c',
+                    text: '#ffffff',
+                    label: '组织'
+                },
+                'GEO': {
+                    background: '#a855f7',      // 紫色
+                    border: '#c084fc',
+                    text: '#ffffff',
+                    label: '地点'
+                },
+                'EVENT': {
+                    background: '#ef4444',      // 红色
+                    border: '#f87171',
+                    text: '#ffffff',
+                    label: '事件'
+                },
+                'CONCEPT': {
+                    background: '#06b6d4',      // 青色
+                    border: '#22d3ee',
+                    text: '#ffffff',
+                    label: '概念'
+                },
+                'default': {
+                    background: '#38bdf8',      // 浅蓝色
+                    border: '#7dd3fc',
+                    text: '#1f2937',           // 深色文字
+                    label: '其他'
+                }
+            };
+
+            state.graph = cytoscape({
+                container: container,
+                elements: elements,
+                style: [
+                    // 基础节点样式
+                    {
+                        selector: 'node',
+                        style: {
+                            'label': 'data(label)',
+                            'width': 52,
+                            'height': 52,
+                            'font-size': '11px',
+                            'font-weight': '600',
+                            'text-valign': 'center',
+                            'text-halign': 'center',
+                            'background-color': '#4f46e5',
+                            'color': '#ffffff',
+                            'border-width': 3,
+                            'border-style': 'solid',
+                            'border-color': '#6366f1',
+                            'box-shadow': '0 4px 8px rgba(0, 0, 0, 0.15)',
+                            'text-shadow': '0 1px 3px rgba(0, 0, 0, 0.4)',
+                            'transition': 'all 0.2s ease-in-out'
+                        }
+                    },
+                    // 节点悬停效果
+                    {
+                        selector: 'node:hover',
+                        style: {
+                            'width': 58,
+                            'height': 58,
+                            'font-size': '12px',
+                            'box-shadow': '0 8px 16px rgba(0, 0, 0, 0.2)',
+                            'z-index': 10,
+                            'transform': 'scale(1.05)'
+                        }
+                    },
+                    // 节点选中效果
+                    {
+                        selector: 'node:selected',
+                        style: {
+                            'border-width': 4,
+                            'border-color': '#1e293b',
+                            'box-shadow': '0 0 0 4px rgba(0, 0, 0, 0.4)'
+                        }
+                    },
+                    // 模型类型节点
+                    {
+                        selector: 'node[type="模型"]',
+                        style: {
+                            'background-color': nodeColors['模型'].background,
+                            'border-color': nodeColors['模型'].border,
+                            'color': nodeColors['模型'].text
+                        }
+                    },
+                    // 技术类型节点
+                    {
+                        selector: 'node[type="技术"]',
+                        style: {
+                            'background-color': nodeColors['技术'].background,
+                            'border-color': nodeColors['技术'].border,
+                            'color': nodeColors['技术'].text
+                        }
+                    },
+                    // 方法类型节点
+                    {
+                        selector: 'node[type="方法"]',
+                        style: {
+                            'background-color': nodeColors['方法'].background,
+                            'border-color': nodeColors['方法'].border,
+                            'color': nodeColors['方法'].text
+                        }
+                    },
+                    // 任务类型节点
+                    {
+                        selector: 'node[type="任务"]',
+                        style: {
+                            'background-color': nodeColors['任务'].background,
+                            'border-color': nodeColors['任务'].border,
+                            'color': nodeColors['任务'].text
+                        }
+                    },
+                    // 人物类型节点（中文）
+                    {
+                        selector: 'node[type="人物"]',
+                        style: {
+                            'background-color': nodeColors['人物'].background,
+                            'border-color': nodeColors['人物'].border,
+                            'color': nodeColors['人物'].text
+                        }
+                    },
+                    // 地点类型节点（中文）
+                    {
+                        selector: 'node[type="地点"]',
+                        style: {
+                            'background-color': nodeColors['地点'].background,
+                            'border-color': nodeColors['地点'].border,
+                            'color': nodeColors['地点'].text
+                        }
+                    },
+                    // 活动类型节点（中文）
+                    {
+                        selector: 'node[type="活动"]',
+                        style: {
+                            'background-color': nodeColors['活动'].background,
+                            'border-color': nodeColors['活动'].border,
+                            'color': nodeColors['活动'].text
+                        }
+                    },
+                    // 物品类型节点（中文）
+                    {
+                        selector: 'node[type="物品"]',
+                        style: {
+                            'background-color': nodeColors['物品'].background,
+                            'border-color': nodeColors['物品'].border,
+                            'color': nodeColors['物品'].text
+                        }
+                    },
+                    // 组织类型节点（中文）
+                    {
+                        selector: 'node[type="组织"]',
+                        style: {
+                            'background-color': nodeColors['组织'].background,
+                            'border-color': nodeColors['组织'].border,
+                            'color': nodeColors['组织'].text
+                        }
+                    },
+                    // 事件类型节点（中文）
+                    {
+                        selector: 'node[type="事件"]',
+                        style: {
+                            'background-color': nodeColors['事件'].background,
+                            'border-color': nodeColors['事件'].border,
+                            'color': nodeColors['事件'].text
+                        }
+                    },
+                    // 概念类型节点（中文）
+                    {
+                        selector: 'node[type="概念"]',
+                        style: {
+                            'background-color': nodeColors['概念'].background,
+                            'border-color': nodeColors['概念'].border,
+                            'color': nodeColors['概念'].text
+                        }
+                    },
+                    // PERSON 类型节点（GraphML 英文）
+                    {
+                        selector: 'node[type="PERSON"]',
+                        style: {
+                            'background-color': nodeColors['PERSON'].background,
+                            'border-color': nodeColors['PERSON'].border,
+                            'color': nodeColors['PERSON'].text
+                        }
+                    },
+                    // ORGANIZATION 类型节点（GraphML 英文）
+                    {
+                        selector: 'node[type="ORGANIZATION"]',
+                        style: {
+                            'background-color': nodeColors['ORGANIZATION'].background,
+                            'border-color': nodeColors['ORGANIZATION'].border,
+                            'color': nodeColors['ORGANIZATION'].text
+                        }
+                    },
+                    // GEO 类型节点（GraphML 英文）
+                    {
+                        selector: 'node[type="GEO"]',
+                        style: {
+                            'background-color': nodeColors['GEO'].background,
+                            'border-color': nodeColors['GEO'].border,
+                            'color': nodeColors['GEO'].text
+                        }
+                    },
+                    // EVENT 类型节点（GraphML 英文）
+                    {
+                        selector: 'node[type="EVENT"]',
+                        style: {
+                            'background-color': nodeColors['EVENT'].background,
+                            'border-color': nodeColors['EVENT'].border,
+                            'color': nodeColors['EVENT'].text
+                        }
+                    },
+                    // CONCEPT 类型节点（GraphML 英文）
+                    {
+                        selector: 'node[type="CONCEPT"]',
+                        style: {
+                            'background-color': nodeColors['CONCEPT'].background,
+                            'border-color': nodeColors['CONCEPT'].border,
+                            'color': nodeColors['CONCEPT'].text
+                        }
+                    },
+                    // 基础边样式 - 中等蓝色
+                    {
+                        selector: 'edge',
+                        style: {
+                            'width': 2.5,
+                            'line-color': '#3b82f6',      // 中等蓝色
+                            'target-arrow-color': '#3b82f6',
+                            'target-arrow-shape': 'triangle',
+                            'arrow-scale': 1.5,
+                            'curve-style': 'bezier',
+                            'transition': 'all 0.2s ease-in-out',
+                            'opacity': 0.9
+                        }
+                    },
+                    // 边悬停效果
+                    {
+                        selector: 'edge:hover',
+                        style: {
+                            'width': 3.5,
+                            'line-color': '#2563eb',      // 深蓝色
+                            'target-arrow-color': '#2563eb',
+                            'opacity': 1
+                        }
+                    },
+                    // 高权重边（>0.9）- 深蓝色，更粗更明显
+                    {
+                        selector: 'edge[weight > 0.9]',
+                        style: {
+                            'width': 3.5,
+                            'line-color': '#1e40af',      // 深蓝色，表示强关联
+                            'target-arrow-color': '#1e40af',
+                            'opacity': 1
+                        }
+                    },
+                    // 中等权重边（0.85-0.9）- 中蓝色
+                    {
+                        selector: 'edge[weight >= 0.85][weight <= 0.9]',
+                        style: {
+                            'width': 2.5,
+                            'line-color': '#3b82f6',      // 中蓝色
+                            'target-arrow-color': '#3b82f6',
+                            'opacity': 0.9
+                        }
+                    },
+                    // 低权重边（<0.85）- 浅蓝色，较细较淡
+                    {
+                        selector: 'edge[weight < 0.85]',
+                        style: {
+                            'width': 1.5,
+                            'line-color': '#93c5fd',      // 浅蓝色
+                            'target-arrow-color': '#93c5fd',
+                            'opacity': 0.7
+                        }
+                    }
+                ],
+                layout: {
+                    name: 'cose',
+                    animate: true,
+                    animateFilter: 'node',
+                    animationDuration: 500,
+                    animationEasing: 'ease-out',
+                    // 优化布局参数
+                    nodeRepulsion: 8000,
+                    nodeOverlap: 10,
+                    idealEdgeLength: 80,
+                    edgeElasticity: 100
+                }
+            });
+
+            // 更新统计
+            document.getElementById('node-count').textContent = elements.filter(e => !e.data.source).length;
+            document.getElementById('edge-count').textContent = elements.filter(e => e.data.source).length;
+        }
+
+        function layoutGraph() {
+            if (state.graph) {
+                state.graph.layout({ name: 'cose', animate: true }).run();
+            }
+        }
+
+        function exportGraph() {
+            alert('图谱导出功能：将在实际实现中导出为 JSON 或 GraphML 格式');
+        }
+
+        // ==================== 文档管理 ====================
+        function renderDocuments() {
+            // LiHua-World 数据集文件夹列表
+            const folderNames = [
+                'bakery_deliver', 'week1', 'week2', 'week3', 'week4', 'week5', 'week6', 'week7', 'week8', 'week9',
+                'week10', 'week11', 'week12', 'week13', 'week14', 'week15', 'week16', 'week17', 'week18', 'week19',
+                'week20', 'week21', 'week22', 'week23', 'week24', 'week25', 'week26', 'week27', 'week28', 'week29',
+                'week30', 'week31', 'week32', 'week33', 'week34', 'week35', 'week36', 'week37', 'week38', 'week39',
+                'week40', 'week41', 'week42', 'week43', 'week44', 'week45', 'week46', 'week47', 'week48', 'week49',
+                'week50', 'week51', 'week52'
+            ];
+
+            // 基于文件夹列表生成文档数据
+            const mockDocs = folderNames.map((folder, index) => {
+                const isWeek = folder.startsWith('week');
+                const weekNum = isWeek ? parseInt(folder.replace('week', '')) : 0;
+
+                // 模拟不同的处理状态
+                let status = 'completed';
+                if (index < 5) {
+                    status = 'completed';
+                } else if (index < 8) {
+                    status = 'processing';
+                } else if (index === 8) {
+                    status = 'failed';
+                }
+
+                // 根据状态生成不同的统计数据
+                let entities, relations, chunks, size, time;
+
+                if (status === 'completed') {
+                    entities = Math.floor(Math.random() * 50) + 20;
+                    relations = Math.floor(Math.random() * 80) + 40;
+                    chunks = Math.floor(Math.random() * 10) + 5;
+                    size = (Math.random() * 2 + 0.5).toFixed(1) + ' MB';
+                } else if (status === 'processing') {
+                    entities = 0;
+                    relations = 0;
+                    chunks = 0;
+                    size = (Math.random() * 1 + 0.3).toFixed(1) + ' MB';
+                } else {
+                    entities = 0;
+                    relations = 0;
+                    chunks = 0;
+                    size = (Math.random() * 0.5 + 0.1).toFixed(1) + ' MB';
+                }
+
+                // 生成时间戳（倒序）
+                const date = new Date(2025, 1, 27 - index);
+                time = date.toISOString().slice(0, 10) + ' ' + String(Math.floor(Math.random() * 24)).padStart(2, '0') + ':' + String(Math.floor(Math.random() * 60)).padStart(2, '0');
+
+                return {
+                    name: `${folder}.txt`,
+                    size: size,
+                    time: time,
+                    status: status,
+                    entities: entities,
+                    relations: relations,
+                    chunks: chunks
+                };
+            });
+
+            const statusMap = {
+                'completed': '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">已完成</span>',
+                'processing': '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">构建中</span>',
+                'failed': '<span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">失败</span>'
+            };
+
+            const tbody = document.getElementById('document-list');
+            tbody.innerHTML = mockDocs.map(doc => `
+                <tr class="border-b hover:bg-gray-50">
+                    <td class="p-3">
+                        <div class="flex items-center">
+                            <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                            ${doc.name}
+                        </div>
+                    </td>
+                    <td class="p-3 text-gray-600">${doc.size}</td>
+                    <td class="p-3 text-gray-600 text-xs">${doc.time}</td>
+                    <td class="p-3">${statusMap[doc.status]}</td>
+                    <td class="p-3 text-center text-xs text-gray-600">
+                        ${doc.entities > 0 ? `${doc.entities} 实体 / ${doc.relations} 关系 / ${doc.chunks} 分块` : '-'}
+                    </td>
+                    <td class="p-3 text-center">
+                        <button class="text-indigo-600 hover:text-indigo-800 mr-2"><i class="fas fa-eye"></i></button>
+                        <button class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ==================== 系统监控 ====================
+        function initCharts() {
+            if (state.charts.latency) return;
+
+            // 响应时间趋势图
+            const latencyCtx = document.getElementById('latency-chart').getContext('2d');
+            state.charts.latency = new Chart(latencyCtx, {
+                type: 'line',
+                data: {
+                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
+                    datasets: [{
+                        label: '响应时间 (ms)',
+                        data: [1200, 980, 1450, 1100, 1300, 1050],
+                        borderColor: '#4f46e5',
+                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // 查询量统计图
+            const queriesCtx = document.getElementById('queries-chart').getContext('2d');
+            state.charts.queries = new Chart(queriesCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
+                    datasets: [{
+                        label: '查询数',
+                        data: [120, 156, 142, 178, 134, 98, 85],
+                        backgroundColor: '#10b981'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { display: false } },
+                    scales: { y: { beginAtZero: true } }
+                }
+            });
+
+            // 初始化日志
+            initLogs();
+        }
+
+        function initLogs() {
+            const mockLogs = [
+                { time: '2025-02-27 10:23:15', level: 'info', msg: '开始处理 document.pdf' },
+                { time: '2025-02-27 10:23:18', level: 'info', msg: 'VF-ERE 初始抽取完成，发现 23 个实体' },
+                { time: '2025-02-27 10:23:20', level: 'info', msg: '第 1 轮迭代修正完成' },
+                { time: '2025-02-27 10:23:22', level: 'warn', msg: '实体 "AI模型" 相似度 0.85，进入模糊仲裁' },
+                { time: '2025-02-27 10:23:25', level: 'info', msg: '图谱更新完成，新增 18 个节点，32 条边' },
+                { time: '2025-02-27 10:24:10', level: 'info', msg: '查询响应完成，耗时 1.2s' },
+                { time: '2025-02-27 10:24:15', level: 'info', msg: '使用嵌入模型: all-MiniLM-L6-v2' },
+                { time: '2025-02-27 10:25:30', level: 'info', msg: '路径检索完成，识别 3 条关键路径' },
+            ];
+
+            const logContainer = document.getElementById('system-log');
+            logContainer.innerHTML = mockLogs.map(log => `
+                <div class="log-entry ${log.level}">[${log.time}] ${log.level.toUpperCase()}: ${log.msg}</div>
+            `).join('');
+        }
+
+        // ==================== 实体管理 ====================
+        function renderEntities() {
+            let entitiesToDisplay;
+
+            // 使用导入的实体数据或模拟数据
+            if (state.importedGraph && state.importedGraph.nodes && state.importedGraph.nodes.length > 0) {
+                // 使用导入的实体数据
+                entitiesToDisplay = state.importedGraph.nodes.map(node => {
+                    // 计算该实体的关系数
+                    const relationsCount = state.importedGraph.edges.filter(edge =>
+                        edge.source === node.id || edge.target === node.id
+                    ).length;
+
+                    // 格式化实体类型
+                    let type = node.type || '未知';
+                    const typeMap = {
+                        'PERSON': '人物',
+                        'ORGANIZATION': '组织',
+                        'GEO': '地点',
+                        'EVENT': '事件',
+                        'CONCEPT': '概念',
+                        'default': '其他'
+                    };
+                    type = typeMap[type] || type;
+
+                    return {
+                        id: node.id,
+                        name: node.name || node.id,
+                        type: type,
+                        desc: node.description || '暂无描述',
+                        relations: relationsCount
+                    };
+                });
+
+                // 按关系数排序，显示前100个
+                entitiesToDisplay.sort((a, b) => b.relations - a.relations);
+                entitiesToDisplay = entitiesToDisplay.slice(0, 100);
+            } else {
+                // 使用模拟数据
+                entitiesToDisplay = [
+                    { id: '1', name: 'Qwen3-4B', type: '模型', desc: '阿里云开源的小型语言模型，参数量40亿', relations: 12 },
+                    { id: '2', name: 'Phi-4-mini', type: '模型', desc: '微软推出的轻量级模型，支持128K上下文', relations: 10 },
+                    { id: '3', name: 'VF-ERE', type: '方法', desc: '验证优先的实体关系抽取方法', relations: 8 },
+                    { id: '4', name: 'Semantic-Flow RAG', type: '方法', desc: '语义引导的路径检索增强生成', relations: 15 },
+                    { id: '5', name: '知识图谱', type: '技术', desc: '用于存储实体和关系的图结构', relations: 20 },
+                ];
+            }
+
+            const listContainer = document.getElementById('entity-list');
+            listContainer.innerHTML = entitiesToDisplay.map(entity => `
+                <div class="p-3 bg-gray-50 rounded-lg cursor-pointer hover:bg-indigo-50 transition-colors" onclick="showEntityDetail('${entity.id.replace(/'/g, "\\'")}')">
+                    <div class="font-medium text-sm">${entity.name}</div>
+                    <div class="text-xs text-gray-500 mt-1">${entity.type} · ${entity.relations} 关系</div>
+                </div>
+            `).join('');
+        }
+
+        function showEntityDetail(entityId) {
+            const detail = document.getElementById('entity-detail');
+
+            let entity, relations, type;
+
+            if (state.importedGraph && state.importedGraph.nodes) {
+                // 从导入的数据中查找实体
+                entity = state.importedGraph.nodes.find(n => n.id === entityId);
+
+                if (!entity) {
+                    detail.innerHTML = `
+                        <div class="text-center text-gray-400 py-12">
+                            <i class="fas fa-exclamation-circle text-4xl mb-4"></i>
+                            <p>未找到实体: ${entityId}</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                // 获取相关关系
+                relations = state.importedGraph.edges.filter(edge =>
+                    edge.source === entityId || edge.target === entityId
+                );
+
+                // 格式化实体类型
+                const typeMap = {
+                    'PERSON': '人物',
+                    'ORGANIZATION': '组织',
+                    'GEO': '地点',
+                    'EVENT': '事件',
+                    'CONCEPT': '概念',
+                    'default': '其他'
+                };
+                type = typeMap[entity.type] || entity.type || '未知';
+            } else {
+                // 使用模拟数据
+                entity = {
+                    id: entityId,
+                    name: '示例实体',
+                    description: '这是一个示例实体描述，展示了实体的详细信息。',
+                    type: '模型'
+                };
+                type = '模型';
+                relations = [
+                    { relation: '使用', target: 'RAG系统', source: entityId },
+                    { relation: '优于', source: 'LLaMA-3-8B', target: entityId }
+                ];
+            }
+
+            // 生成关系列表HTML
+            const relationsHtml = relations.slice(0, 10).map(rel => {
+                const isSource = rel.source === entityId;
+                const otherEntityId = isSource ? rel.target : rel.source;
+                const otherEntity = state.importedGraph?.nodes?.find(n => n.id === otherEntityId);
+                const otherEntityName = otherEntity?.name || otherEntityId;
+                const relationLabel = rel.relation || rel.keywords || '相关';
+
+                return `
+                    <div class="flex items-center text-sm p-2 bg-gray-50 rounded">
+                        <span class="${isSource ? 'text-indigo-600' : 'text-green-600'}">${isSource ? '→' : '←'}</span>
+                        <span class="ml-2">${relationLabel}</span>
+                        <span class="ml-auto font-medium">${otherEntityName}</span>
+                    </div>
+                `;
+            }).join('');
+
+            detail.innerHTML = `
+                <div class="border-b pb-4 mb-4">
+                    <h3 class="text-lg font-bold">${entity.name || entity.id}</h3>
+                    <span class="inline-block px-2 py-1 bg-indigo-100 text-indigo-800 rounded text-xs mt-2">${type}</span>
+                </div>
+                <div class="space-y-4">
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">描述</h4>
+                        <p class="text-sm text-gray-600">${entity.description || '暂无描述'}</p>
+                    </div>
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">关联关系 (${relations.length})</h4>
+                        <div class="space-y-2 max-h-64 overflow-y-auto">
+                            ${relationsHtml || '<p class="text-sm text-gray-400">暂无关联关系</p>'}
+                        </div>
+                    </div>
+                    ${entity.source_id ? `
+                    <div>
+                        <h4 class="font-semibold text-sm mb-2">数据来源</h4>
+                        <p class="text-xs text-gray-500 break-all">${entity.source_id}</p>
+                    </div>
+                    ` : ''}
+                </div>
+                <div class="mt-6 pt-4 border-t flex space-x-2">
+                    <button class="px-4 py-2 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700">
+                        <i class="fas fa-edit mr-2"></i>编辑
+                    </button>
+                    <button class="px-4 py-2 border border-gray-300 rounded text-sm hover:bg-gray-50" onclick="highlightEntityInGraph('${entityId}')">
+                        <i class="fas fa-link mr-2"></i>查看图谱
+                    </button>
+                </div>
+            `;
+        }
+
+        // 在图谱中高亮显示实体
+        function highlightEntityInGraph(entityId) {
+            // 切换到图谱标签页
+            document.querySelector('[data-tab="graph"]').click();
+
+            setTimeout(() => {
+                if (state.graph) {
+                    const node = state.graph.getElementById(entityId);
+                    if (node) {
+                        // 选中节点
+                        state.graph.$('#' + entityId).select();
+                        // 聚焦到节点
+                        state.graph.animate({
+                            center: {
+                                eles: state.graph.$('#' + entityId)
+                            },
+                            zoom: 1.5
+                        }, {
+                            duration: 500
+                        });
+                    } else {
+                        alert(`未在图谱中找到实体: ${entityId}`);
+                    }
+                }
+            }, 100);
+        }
+
+        // ==================== 初始化 ====================
+        document.addEventListener('DOMContentLoaded', function() {
+            // 设置默认展开的面板
+            // 模型配置：默认展开
+            // 数据管理：默认展开
+            // 分块配置：默认展开
+            // 知识图谱导入：默认折叠
+
+            // 支持回车发送消息
+            document.getElementById('user-input').addEventListener('keypress', function(e) {
+                if (e.key === 'Enter') sendMessage();
+            });
+
+            // 分块配置输入监听
+            const chunkSizeInput = document.getElementById('chunk-size');
+            const chunkOverlapInput = document.getElementById('chunk-overlap');
+
+            if (chunkSizeInput) {
+                chunkSizeInput.addEventListener('input', updateChunkDisplay);
+            }
+            if (chunkOverlapInput) {
+                chunkOverlapInput.addEventListener('input', updateChunkDisplay);
+            }
+
+            // 初始化分块配置显示
+            updateChunkDisplay();
+
+            // 为格式选择按钮添加样式修复
+            document.querySelectorAll('.graph-format-btn').forEach(btn => {
+                btn.classList.add('truncate', 'text-overflow-hidden', 'overflow-ellipsis');
+            });
+        });
+    </script>
+</body>
+</html>
