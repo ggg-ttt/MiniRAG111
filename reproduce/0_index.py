@@ -4,36 +4,44 @@
 
 import sys
 import os
+import logging
+import json
+
+# 控制 OpenAI 客户端的日志级别
+# 可选值: DEBUG, INFO, WARNING, ERROR, CRITICAL
+# 设置为 WARNING 或 ERROR 可以减少日志输出
+logging.getLogger("openai").setLevel(logging.WARNING)  # 控制 OpenAI 客户端的日志级别
+logging.getLogger("httpx").setLevel(logging.WARNING)  # 控制 HTTP 请求的日志级别
 
 # 将上级目录加入sys.path，方便导入minirag包
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # 导入MiniRAG相关模块和函数
 from minirag import MiniRAG
-from minirag.llm import (
-    hf_model_complete,
-    hf_embed,
-    vllm_model_complete,
-    vllm_embed
-)
-from minirag.utils import EmbeddingFunc
+from minirag.llm import hf_embed
+from minirag.utils import EmbeddingFunc, compute_mdhash_id
 from transformers import AutoModel, AutoTokenizer
-
+from minirag.llm.openai import openai_complete_if_cache
 # 指定用于文本嵌入的模型
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
+
+# OpenAI API 配置
+OPENAI_API_KEY = "sk-daquqwlxgxwpsbnsefqqcgzajxnimxtknrehfrtpohomrudw"  # 请替换为你的 OpenAI API 密钥
+OPENAI_BASE_URL = "https://api.siliconflow.cn/v1"  # 或其他兼容的 API 地址，如: "https://api.deepseek.com/v1"
+OPENAI_MODEL = "deepseek-ai/DeepSeek-V3.2"  # 可选: gpt-4o, gpt-4o-mini, gpt-3.5-turbo 等
 
 import argparse
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 import os
-os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+# os.environ["CUDA_VISIBLE_DEVICES"] = "7"
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
-    parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_batch4")  # 工作目录
+    parser.add_argument("--model", type=str, default="openai")  # 指定LLM模型
+    parser.add_argument("--outputpath", type=str, default="./tests/openai/Default_output.csv")  # 输出路径
+    parser.add_argument("--workingdir", type=str, default="./tests/openai")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
@@ -49,8 +57,8 @@ if args.model == "PHI":
     LLM_MODEL = "microsoft/Phi-3.5-mini-instruct"
 elif args.model == "GLM":
     LLM_MODEL = "THUDM/glm-edge-1.5b-chat"
-elif args.model == "MiniCPM":
-    LLM_MODEL = "openbmb/MiniCPM3-4B"
+elif args.model == "openai":
+    LLM_MODEL =  "deepseek-ai/DeepSeek-V3.2"
 elif args.model == "qwen":
     LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 else:
@@ -82,22 +90,44 @@ embed_model = AutoModel.from_pretrained(
     dtype=torch.float16,  # 降低显存占用
 )
 
-# 初始化MiniRAG对象d
+# 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=hf_model_complete,      # 指定LLM推理函数
-    llm_model_max_token_size=8192,         # LLM最大token数
-    llm_model_name=LLM_MODEL,              # LLM模型名称
+    llm_model_func=lambda *args, **kwargs: openai_complete_if_cache(
+        *args,
+        base_url=OPENAI_BASE_URL,
+        api_key=OPENAI_API_KEY,
+        **kwargs
+    ),                                       # 使用 OpenAI API
+    llm_model_max_token_size=8192,          # LLM最大token数（输入+输出总和）
+    llm_model_name=OPENAI_MODEL,            # OpenAI 模型名称
+    embedding_batch_num=16,                 # 减小embedding批次大小，降低显存占用（默认32）
     embedding_func=EmbeddingFunc(
-        embedding_dim=384,                 # 嵌入维度
-        max_token_size=1000,               # 嵌入最大token数
+        embedding_dim=384,                  # 嵌入维度
+        max_token_size=1000,                # 嵌入最大token数
         func=lambda texts: hf_embed(
             texts,
-            tokenizer=tokenizer,           # 复用分词器
-            embed_model=embed_model,       # 复用模型
+            tokenizer=tokenizer,            # 复用分词器
+            embed_model=embed_model,        # 复用模型
         ),
     ),
 )
+
+# 载入已处理文档的 doc_id 集合（来源：working_dir/kv_store_full_docs.json）
+def load_processed_doc_ids(work_dir: str):
+    """加载已处理的文档ID集合，避免重复处理"""
+    kv_path = os.path.join(work_dir, "kv_store_full_docs.json")
+    if not os.path.exists(kv_path):
+        return set()
+    try:
+        with open(kv_path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            return set(data.keys())
+    except Exception as e:
+        print(f"Warning: failed to load processed doc ids from {kv_path}: {e}")
+        return set()
+
+processed_doc_ids = load_processed_doc_ids(WORKING_DIR)
 
 # 查找指定目录下所有txt文件
 def find_txt_files(root_path):
@@ -117,11 +147,13 @@ print(f"共找到 {len(WEEK_LIST)} 个txt文件，开始处理...")
 
 # 使用线程池并行读取文件，按批次边读边插入，避免一次性占用大量内存
 def load_txt_file(path: str):
+    """加载文本文件，返回文件路径和内容"""
     with open(path, "r", encoding="utf-8") as f:
-        return f.read()
+        return path, f.read()
+
 # print("CPU核心数:", os.cpu_count())
-max_workers = 8
-BATCH_SIZE = 4  # 减小单批文档数，降低单次显存压力
+max_workers = 4  # 降低并发数，避免API请求过于集中
+BATCH_SIZE = 2   # 减小单批文档数，降低单次显存压力
 buffer = []
 with ThreadPoolExecutor(max_workers=max_workers) as executor:
     futures = [executor.submit(load_txt_file, path) for path in WEEK_LIST]
@@ -132,7 +164,15 @@ with ThreadPoolExecutor(max_workers=max_workers) as executor:
         unit="file",
         mininterval=1.0,  # 控制进度条刷新间隔（秒），可按需调整
     ):
-        buffer.append(future.result())
+        file_path, content = future.result()
+
+        # 基于内容计算 doc_id（与 MiniRAG 内部一致的 MD5 前缀）
+        doc_id = compute_mdhash_id(content, prefix="doc-")
+        if doc_id in processed_doc_ids:
+            # 已处理文档，跳过
+            continue
+
+        buffer.append(content)
         if len(buffer) >= BATCH_SIZE:
             # 保持文档粒度，直接传列表，避免跨文件合并导致实体/关系混淆
             rag.insert(buffer)
