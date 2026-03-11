@@ -22,7 +22,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # 导入MiniRAG相关模块和函数
 from minirag import MiniRAG
 from minirag.llm import (
-    hf_embed,  # Embedding 使用 transformers，vLLM 不提供 embedding 功能
+    hf_embed,  # Embedding 使用 transformers
     openai_complete_if_cache,  # 直接使用底层函数，可以传递 base_url
 )
 from minirag.utils import EmbeddingFunc, compute_mdhash_id
@@ -35,16 +35,36 @@ import argparse
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-# 解析命令行参数
+
+"""
+python 0_index_vllm.py --api_type openai --model deepseek-chat \
+    --openai_api_key sk-xxx --openai_base_url https://api.deepseek.com/v1
+
+"""
+
+
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="qwen")  # 指定LLM模型
     parser.add_argument("--outputpath", type=str, default="./tests/Qwen/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/Qwen3-4B-Instruct-2507_vllm")  # 工作目录
+    parser.add_argument("--workingdir", type=str, default="./tests/dpsk")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
+    # OpenAI API 相关参数
+    parser.add_argument(
+        "--api_type", type=str, default="vllm", choices=["vllm", "openai"],
+        help="API 类型：vllm（本地vLLM server）或 openai（OpenAI兼容接口）"
+    )
+    parser.add_argument(
+        "--openai_base_url", type=str, default="https://api.siliconflow.cn/v1",
+        help="OpenAI API base URL，也可以是兼容 OpenAI 格式的第三方 API 地址"
+    )
+    parser.add_argument(
+        "--openai_api_key", type=str, default=None,
+        help="OpenAI API Key"
+    )
     args = parser.parse_args()
     return args
 
@@ -52,17 +72,22 @@ def get_args():
 args = get_args()
 
 # 根据参数选择不同的LLM模型
-if args.model == "PHI":
-    LLM_MODEL = "microsoft/Phi-4-mini-instruct"
-elif args.model == "GLM":
-    LLM_MODEL = "THUDM/glm-edge-1.5b-chat"
-elif args.model == "MiniCPM":
-    LLM_MODEL = "openbmb/MiniCPM3-4B"
-elif args.model == "qwen":
-    LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
+if args.api_type == "openai":
+    # OpenAI 模式下，--model 直接作为模型名称（如 gpt-4o、gpt-4-turbo、deepseek-chat 等）
+    LLM_MODEL = "deepseek-ai/DeepSeek-V3.2"
 else:
-    print("Invalid model name")
-    exit(1)
+    # vLLM 模式下，根据参数选择本地模型
+    if args.model == "PHI":
+        LLM_MODEL = "microsoft/Phi-4-mini-instruct"
+    elif args.model == "GLM":
+        LLM_MODEL = "THUDM/glm-edge-1.5b-chat"
+    elif args.model == "MiniCPM":
+        LLM_MODEL = "openbmb/MiniCPM3-4B"
+    elif args.model == "qwen":
+        LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
+    else:
+        print("Invalid model name")
+        exit(1)
 
 # 设定各路径参数
 WORKING_DIR = args.workingdir
@@ -93,6 +118,10 @@ embed_model = AutoModel.from_pretrained(
 VLLM_SERVER_BASE_URL = "http://0.0.0.0:8000/v1"  # vLLM server 地址
 VLLM_API_KEY = None  # 如果 vLLM server 设置了 API key，在这里填写
 
+# OpenAI API 配置（由命令行参数指定）
+OPENAI_BASE_URL = args.openai_base_url
+OPENAI_API_KEY = args.openai_api_key
+
 # 创建包装函数，连接到 vLLM server
 async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs):
     """通过 vLLM server 调用模型的包装函数"""
@@ -122,10 +151,45 @@ async def vllm_server_complete(prompt, system_prompt=None, history_messages=[], 
     
     return result
 
+# OpenAI API 包装函数（与 vllm_server_complete 接口完全一致）
+async def openai_complete(prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs):
+    """通过 OpenAI 兼容 API 调用模型的包装函数"""
+    keyword_extraction = kwargs.pop("keyword_extraction", None)
+
+    if not OPENAI_API_KEY:
+        raise ValueError("使用 OpenAI API 时必须通过 --openai_api_key 参数提供 API Key")
+
+    result = await openai_complete_if_cache(
+        model=LLM_MODEL,
+        prompt=prompt,
+        system_prompt=system_prompt,
+        history_messages=history_messages,
+        base_url=OPENAI_BASE_URL,   # OpenAI API 地址
+        api_key=OPENAI_API_KEY,     # OpenAI API Key
+        **kwargs
+    )
+
+    # 如果需要关键词提取，处理 JSON 响应
+    if keyword_extraction:
+        from minirag.utils import locate_json_string_body_from_string
+        return locate_json_string_body_from_string(result)
+
+    return result
+
+# 根据 api_type 选择对应的 LLM 函数
+if args.api_type == "openai":
+    llm_func = openai_complete
+    print("API 类型: OpenAI")
+    print("OPENAI BASE URL:", OPENAI_BASE_URL)
+else:
+    llm_func = vllm_server_complete
+    print("API 类型: vLLM Server")
+    print("VLLM SERVER URL:", VLLM_SERVER_BASE_URL)
+
 # 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=vllm_server_complete,  # 使用 vLLM server 包装函数
+    llm_model_func=llm_func,  # 根据 api_type 选择 LLM 函数
     llm_model_max_token_size=8192,         # 输入（Prompt）与输出（Completion）的总和长度，即模型的最大上下文窗口（Context Window）
     llm_model_name=LLM_MODEL,              # LLM模型名称
     embedding_batch_num=16,                # 减小embedding批次大小，降低显存占用（默认32）
