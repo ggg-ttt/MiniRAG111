@@ -47,18 +47,6 @@ def get_args():
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
     )  # 查询集路径
     parser.add_argument("--mode", type=str, default="light", choices=["naive", "light", "mini"])  # RAG模式
-    parser.add_argument(
-        "--resume",
-        action="store_true",
-        default=True,
-        help="断点续跑：跳过输出文件里已经有结果的行，仅补全空结果行",
-    )
-    parser.add_argument(
-        "--no-resume",
-        action="store_false",
-        dest="resume",
-        help="关闭断点续跑：即使已有结果也重新计算",
-    )
     args = parser.parse_args()
     return args
 
@@ -172,7 +160,7 @@ with open(QUERY_PATH, mode="r", encoding="utf-8") as question_file:
         GA_LIST.append(row["Gold Answer"])
 
 # 运行实验并记录结果
-def run_experiment(output_path, mode: str, resume: bool = True):
+def run_experiment(output_path, mode: str):
     if mode == "naive":
         result_column = "naiveRAG"  # 结果列名
     elif mode == "light":
@@ -182,12 +170,6 @@ def run_experiment(output_path, mode: str, resume: bool = True):
     else:
         print("Invalid mode")
         exit(1)
-
-    def persist_rows(fieldnames, rows):
-        with open(output_path, mode="w", newline="", encoding="utf-8") as f:
-            writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
-            writer.writerows(rows)
 
     # 检查输出文件是否已存在且有数据
     if os.path.exists(output_path) and os.path.getsize(output_path) > 0:
@@ -247,16 +229,14 @@ def run_experiment(output_path, mode: str, resume: bool = True):
             print(f"读取到 {len(existing_rows)} 行已存在的数据")
 
             # 对每行的 Question 使用 MiniRAG 进行问答
-            skipped_count = 0
-            answered_count = 0
             for idx in trange(len(existing_rows), desc="处理问题"):
                 row = existing_rows[idx]
                 question = row["Question"]
 
-                # 断点续跑：已有结果时跳过，避免中断后重复请求API
-                if resume and result_column in row and row[result_column] and row[result_column].strip():
-                    skipped_count += 1
-                    continue
+                # 如果该问题已有结果且不为空，可以选择跳过或重新计算
+                # 这里选择重新计算（如果需要跳过，可以取消下面的注释）
+                # if result_column in row and row[result_column] and row[result_column].strip():
+                #     continue
 
                 print()
                 print(f"问题 {idx + 1}/{len(existing_rows)}: {question}")
@@ -280,16 +260,13 @@ def run_experiment(output_path, mode: str, resume: bool = True):
 
                 # 更新该行的结果列
                 row[result_column] = minirag_answer
-                answered_count += 1
 
-                if answered_count % 100 == 0:
-                    persist_rows(fieldnames, existing_rows)
-                    print(f"已累计保存 {answered_count} 条新结果到文件: {output_path}")
+            # 写回文件（覆盖模式）
+            with open(output_path, mode="w", newline="", encoding="utf-8") as f:
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                writer.writerows(existing_rows)
 
-            persist_rows(fieldnames, existing_rows)
-
-            if resume:
-                print(f"断点续跑已跳过 {skipped_count} 条已有结果")
             print(f"已将结果追加到文件: {output_path}")
     else:
         # 文件不存在，创建新文件
@@ -332,9 +309,7 @@ def run_experiment(output_path, mode: str, resume: bool = True):
 # 主流程，直接运行实验
 if __name__ == "__main__":
     """
-    python ./reproduce/1_QA.py --mode mini --outputpath ./tests/dpsk_mini/dpsk_mini_output.csv --workingdir ./tests/dpsk_mini
-    python ./reproduce/1_QA.py --mode mini --outputpath ./tests/dpsk_mini/dpsk_mini_output.csv --workingdir ./tests/dpsk_mini
-    python ./reproduce/1_QA.py --mode mini --outputpath ./tests/dpsk_mini/dpsk_mini_output.csv --workingdir ./tests/dpsk_mini
+    python ./reproduce/1_QA.py --mode light --outputpath ./tests/dpsk_light/dpsk_light_output.csv --workingdir ./tests/dpsk_light
     """
     mode = args.mode
-    run_experiment(OUTPUT_PATH, mode=mode, resume=args.resume)
+    run_experiment(OUTPUT_PATH, mode=mode)

@@ -55,10 +55,10 @@ args = get_args()
 # 根据参数选择不同的LLM模型
 if args.model == "PHI":
     LLM_MODEL = "microsoft/Phi-3.5-mini-instruct"
-elif args.model == "GLM":
-    LLM_MODEL = "THUDM/glm-edge-1.5b-chat"
-elif args.model == "openai":
-    LLM_MODEL =  "deepseek-ai/DeepSeek-V3.2"
+elif args.model == "dpsk":
+    LLM_MODEL = "deepseek-ai/DeepSeek-V3.2"
+elif args.model == "MiniCPM":
+    LLM_MODEL = "openbmb/MiniCPM3-4B"
 elif args.model == "qwen":
     LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
 else:
