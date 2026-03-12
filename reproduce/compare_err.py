@@ -7,7 +7,7 @@ from openai import OpenAI
 # 配置区
 # ─────────────────────────────────────────────
 API_BASE_URL = "https://api.siliconflow.cn/v1"
-API_KEY      = "sk-daquqwlxgxwpsbnsefqqcgzajxnimxtknrehfrtpohomrudw"
+API_KEY      = ""
 EVAL_MODEL   = "deepseek-ai/DeepSeek-V3.2"
 
 INPUT_CSV    = "tests/Qwen3-4B-Instruct-2507_vllm_debug/qwen_mini_output.csv"
