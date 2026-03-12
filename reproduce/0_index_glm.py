@@ -21,86 +21,12 @@ from minirag import MiniRAG
 from minirag.llm import hf_embed
 from minirag.utils import EmbeddingFunc, compute_mdhash_id
 from transformers import AutoModel, AutoTokenizer
-from minirag.llm import openai_complete_if_cache
+from minirag.llm.zhipu import zhipu_complete_if_cache
 # 指定用于文本嵌入的模型
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
-# OpenAI API 配置
-OPENAI_API_BASE = "https://api.siliconflow.cn/v1"  # OpenAI API 地址
-OPENAI_API_KEY = "sk-hposqcnxukfowsoqzrseybpzswlzkfuljjfvwelfojxuhcpj"  # 请替换为你的 OpenAI API 密钥
-
-# 创建包装函数，连接到 OpenAI API
-import asyncio
-import time
-
-# 速率限制控制
-_last_request_time = 0
-_min_interval = 0.5  # 每次请求间隔 0.5 秒（可根据需要调整）
-
-async def openai_server_complete(prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs):
-    """通过 OpenAI API 调用模型的包装函数"""
-    global _last_request_time
-
-    # 速率限制：确保两次请求之间有间隔
-    current_time = time.time()
-    time_since_last = current_time - _last_request_time
-    if time_since_last < _min_interval:
-        await asyncio.sleep(_min_interval - time_since_last)
-    _last_request_time = time.time()
-
-    # 从 kwargs 中获取模型名称（MiniRAG 会通过 hashing_kv 传递）
-    keyword_extraction = kwargs.pop("keyword_extraction", None)
-    model_name = kwargs["hashing_kv"].global_config["llm_model_name"]
-
-    # 设置默认的生成参数（可以通过 kwargs 覆盖）
-    default_params = {
-        "max_tokens": 100,        # 最大输出长度（tokens）
-        "temperature": 0.3,        # 温度参数（0.0-2.0，越高越随机）
-        "top_p": 0.8,              # top-p 采样（0.0-1.0）
-        "frequency_penalty": 0.0,   # 频率惩罚（-2.0 到 2.0）
-        "presence_penalty": 0.0,   # 存在惩罚（-2.0 到 2.0）
-        "stop": None,              # 停止序列（列表或 None）
-    }
-
-    # 合并默认参数和用户传入的参数（用户参数优先）
-    merged_params = {**default_params, **kwargs}
-
-    # 过滤掉 OpenAI API 不支持的参数
-    supported_params = {
-        "max_tokens", "temperature", "top_p", "frequency_penalty",
-        "presence_penalty", "stop", "stream", "logprobs", "top_logprobs"
-    }
-    filtered_params = {k: v for k, v in merged_params.items() if k in supported_params}
-
-    # 调用 openai_complete_if_cache（带重试机制）
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            result = await openai_complete_if_cache(
-                model=model_name,
-                prompt=prompt,
-                system_prompt=system_prompt,
-                history_messages=history_messages,
-                base_url=OPENAI_API_BASE,  # 指定 OpenAI API 地址
-                api_key=OPENAI_API_KEY,  # API key
-                **filtered_params  # 传递过滤后的参数
-            )
-            break  # 成功则跳出重试循环
-        except Exception as e:
-            if "rate limit" in str(e).lower() and attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 2  # 指数退避：2s, 4s, 6s
-                print(f"Rate limit hit, waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
-                await asyncio.sleep(wait_time)
-            else:
-                raise  # 非速率限制错误或重试耗尽则抛出异常
-
-    # 如果需要关键词提取，处理 JSON 响应
-    if keyword_extraction:
-        from minirag.utils import locate_json_string_body_from_string
-        return locate_json_string_body_from_string(result)
-
-    return result
-
+# 智谱 API 配置
+ZHIPU_API_KEY = "fc9d4f54470c4222b3131e54af0295ec.JozSQr3hvOPzZKSS"  # 请替换为你的智谱 API 密钥
 import argparse
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
@@ -110,9 +36,9 @@ import os
 # 解析命令行参数
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
-    parser.add_argument("--model", type=str, default="dpsk")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./tests/dpsk/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/dpsk")  # 工作目录
+    parser.add_argument("--model", type=str, default="glm")  # 指定LLM模型
+    parser.add_argument("--outputpath", type=str, default="./tests/glm/Default_output.csv")  # 输出路径
+    parser.add_argument("--workingdir", type=str, default="./tests/glm")  # 工作目录
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
     parser.add_argument(
         "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
@@ -127,7 +53,7 @@ args = get_args()
 if args.model == "PHI":
     LLM_MODEL = "microsoft/Phi-3.5-mini-instruct"
 elif args.model == "dpsk":
-    LLM_MODEL = "Pro/deepseek-ai/DeepSeek-V3.2"
+    LLM_MODEL = "deepseek-ai/DeepSeek-V3.2"
 elif args.model == "glm":
     LLM_MODEL = "glm-4.5-air"
 elif args.model == "qwen":
@@ -163,7 +89,12 @@ embed_model = AutoModel.from_pretrained(
 # 初始化MiniRAG对象
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=openai_server_complete,  # 使用 OpenAI API                                       
+    llm_model_func=lambda prompt, **kwargs: zhipu_complete_if_cache(
+        prompt=prompt,
+        model=LLM_MODEL,
+        api_key=ZHIPU_API_KEY,
+        **kwargs
+    ),                                       # 使用智谱 API
     llm_model_max_token_size=8192,          # LLM最大token数（输入+输出总和）
     llm_model_name=LLM_MODEL,            # 模型名称
     embedding_batch_num=16,                 # 减小embedding批次大小，降低显存占用（默认32）
