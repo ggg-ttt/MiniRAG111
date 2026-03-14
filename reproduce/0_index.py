@@ -8,10 +8,8 @@ import logging
 import json
 
 # 控制 OpenAI 客户端的日志级别
-# 可选值: DEBUG, INFO, WARNING, ERROR, CRITICAL
-# 设置为 WARNING 或 ERROR 可以减少日志输出
-logging.getLogger("openai").setLevel(logging.WARNING)  # 控制 OpenAI 客户端的日志级别
-logging.getLogger("httpx").setLevel(logging.WARNING)  # 控制 HTTP 请求的日志级别
+logging.getLogger("openai").setLevel(logging.WARNING)
+logging.getLogger("httpx").setLevel(logging.WARNING)
 
 # 将上级目录加入sys.path，方便导入minirag包
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -22,55 +20,102 @@ from minirag.llm import hf_embed
 from minirag.utils import EmbeddingFunc, compute_mdhash_id
 from transformers import AutoModel, AutoTokenizer
 from minirag.llm import openai_complete_if_cache
+
+import asyncio
+import time
+from dataclasses import dataclass, field
+from typing import Optional
+
 # 指定用于文本嵌入的模型
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # OpenAI API 配置
-OPENAI_API_BASE = "https://api.siliconflow.cn/v1"  # OpenAI API 地址
-OPENAI_API_KEY = "sk-hposqcnxukfowsoqzrseybpzswlzkfuljjfvwelfojxuhcpj"  # 请替换为你的 OpenAI API 密钥
+OPENAI_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
+OPENAI_API_KEY = "sk-a078bffba20e4153bc287ef815678981"
+if not OPENAI_API_KEY:
+    raise EnvironmentError(
+        "未检测到 API Key，请先设置 DASHSCOPE_API_KEY（或 OPENAI_API_KEY）。"
+    )
 
-# 创建包装函数，连接到 OpenAI API
-import asyncio
-import time
 
-# 速率限制控制
-_last_request_time = 0
-_min_interval = 0.5  # 每次请求间隔 0.5 秒（可根据需要调整）
+# ==================== Token Bucket 速率限制器 ====================
+@dataclass
+class TokenBucketLimiter:
+    """
+    Token Bucket 算法实现的速率限制器
+    同时控制 RPM (Requests Per Minute) 和 TPM (Tokens Per Minute)
+    """
+    rpm: int = 600          # 每分钟最大请求数
+    tpm: int = 1_000_000    # 每分钟最大token数
 
-async def openai_server_complete(prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs):
-    """通过 OpenAI API 调用模型的包装函数"""
-    global _last_request_time
+    # 内部状态
+    _req_tokens: float = field(default=0, repr=False)
+    _token_tokens: float = field(default=0, repr=False)
+    _last_update: float = field(default_factory=time.time, repr=False)
+    _lock: asyncio.Lock = field(default_factory=asyncio.Lock, repr=False)
 
-    # 速率限制：确保两次请求之间有间隔
-    current_time = time.time()
-    time_since_last = current_time - _last_request_time
-    if time_since_last < _min_interval:
-        await asyncio.sleep(_min_interval - time_since_last)
-    _last_request_time = time.time()
+    def __post_init__(self):
+        self._req_rate = self.rpm / 60.0      # 每秒请求数 (10 req/s)
+        self._token_rate = self.tpm / 60.0    # 每秒token数 (~16666 tokens/s)
+        self._req_tokens = self._req_rate     # 初始满桶
+        self._token_tokens = self._token_rate
 
-    # 从 kwargs 中获取模型名称（MiniRAG 会通过 hashing_kv 传递）
-    keyword_extraction = kwargs.pop("keyword_extraction", None)
-    model_name = kwargs["hashing_kv"].global_config["llm_model_name"]
+    async def acquire(self, estimated_tokens: int = 2000) -> None:
+        """获取执行权限"""
+        async with self._lock:
+            while True:
+                now = time.time()
+                elapsed = now - self._last_update
+                self._last_update = now
 
-    # 设置默认的生成参数（可以通过 kwargs 覆盖）
-    default_params = {
-        "max_tokens": 100,        # 最大输出长度（tokens）
-        "temperature": 0.3,        # 温度参数（0.0-2.0，越高越随机）
-        "top_p": 0.8,              # top-p 采样（0.0-1.0）
-        "frequency_penalty": 0.0,   # 频率惩罚（-2.0 到 2.0）
-        "presence_penalty": 0.0,   # 存在惩罚（-2.0 到 2.0）
-        "stop": None,              # 停止序列（列表或 None）
-    }
+                # 补充token
+                self._req_tokens = min(self.rpm, self._req_tokens + self._req_rate * elapsed)
+                self._token_tokens = min(self.tpm, self._token_tokens + self._token_rate * elapsed)
 
-    # 合并默认参数和用户传入的参数（用户参数优先）
-    merged_params = {**default_params, **kwargs}
+                # 检查是否满足条件
+                if self._req_tokens >= 1 and self._token_tokens >= estimated_tokens:
+                    self._req_tokens -= 1
+                    self._token_tokens -= estimated_tokens
+                    return
 
-    # 过滤掉 OpenAI API 不支持的参数
-    supported_params = {
-        "max_tokens", "temperature", "top_p", "frequency_penalty",
-        "presence_penalty", "stop", "stream", "logprobs", "top_logprobs"
-    }
-    filtered_params = {k: v for k, v in merged_params.items() if k in supported_params}
+                # 计算需要等待的时间
+                wait_time = 0
+                if self._req_tokens < 1:
+                    wait_time = max(wait_time, (1 - self._req_tokens) / self._req_rate)
+                if self._token_tokens < estimated_tokens:
+                    wait_time = max(wait_time, (estimated_tokens - self._token_tokens) / self._token_rate)
+
+                # 释放锁，等待，然后重试
+                await asyncio.sleep(max(0.001, wait_time))
+
+
+# 全局速率限制器实例 (600 RPM, 1,000,000 TPM)
+rate_limiter = TokenBucketLimiter(rpm=600, tpm=1_000_000)
+
+
+async def openai_server_complete(prompt, system_prompt=None, history_messages=None, keyword_extraction=False, **kwargs):
+    """通过 OpenAI API 调用模型的包装函数（使用 Token Bucket 速率限制）"""
+    if history_messages is None:
+        history_messages = []
+
+    # 从 kwargs 中获取模型名称
+    keyword_extraction_flag = kwargs.pop("keyword_extraction", keyword_extraction)
+    if "hashing_kv" in kwargs:
+        model_name = kwargs["hashing_kv"].global_config["llm_model_name"]
+    else:
+        model_name = kwargs.pop("model", None)
+        if not model_name:
+            raise ValueError("缺少模型名：请通过 hashing_kv 或 model 参数提供")
+
+    # 估算token数（粗略估计：输入长度 / 4 + 输出预留）
+    prompt_tokens = len(prompt) // 4 if prompt else 0
+    system_tokens = len(system_prompt) // 4 if system_prompt else 0
+    history_tokens = sum(len(m.get("content", "")) // 4 for m in history_messages)
+    estimated_input = prompt_tokens + system_tokens + history_tokens
+    estimated_total = estimated_input + 4000  # 预留4000输出token
+
+    # 使用 Token Bucket 等待许可
+    await rate_limiter.acquire(estimated_tokens=estimated_total)
 
     # 调用 openai_complete_if_cache（带重试机制）
     max_retries = 3
@@ -81,21 +126,28 @@ async def openai_server_complete(prompt, system_prompt=None, history_messages=[]
                 prompt=prompt,
                 system_prompt=system_prompt,
                 history_messages=history_messages,
-                base_url=OPENAI_API_BASE,  # 指定 OpenAI API 地址
-                api_key=OPENAI_API_KEY,  # API key
-                **filtered_params  # 传递过滤后的参数
+                base_url=OPENAI_API_BASE,
+                api_key=OPENAI_API_KEY,
+                timeout=300.0,
+                **kwargs
             )
-            break  # 成功则跳出重试循环
+            break
         except Exception as e:
-            if "rate limit" in str(e).lower() and attempt < max_retries - 1:
-                wait_time = (attempt + 1) * 2  # 指数退避：2s, 4s, 6s
-                print(f"Rate limit hit, waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
+            error_msg = str(e).lower()
+            is_rate_limit = "rate limit" in error_msg or "too many requests" in error_msg
+            is_timeout = "timeout" in error_msg or "connect" in error_msg
+
+            if (is_rate_limit or is_timeout) and attempt < max_retries - 1:
+                wait_time = (attempt + 1) * 5
+                if is_timeout:
+                    print(f"Connection timeout, waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
+                else:
+                    print(f"Rate limit hit, waiting {wait_time}s before retry {attempt + 1}/{max_retries}...")
                 await asyncio.sleep(wait_time)
             else:
-                raise  # 非速率限制错误或重试耗尽则抛出异常
+                raise
 
-    # 如果需要关键词提取，处理 JSON 响应
-    if keyword_extraction:
+    if keyword_extraction_flag:
         from minirag.utils import locate_json_string_body_from_string
         return locate_json_string_body_from_string(result)
 
@@ -104,19 +156,25 @@ async def openai_server_complete(prompt, system_prompt=None, history_messages=[]
 import argparse
 import torch
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
 
 import os
 # os.environ["CUDA_VISIBLE_DEVICES"] = "7"
+
 # 解析命令行参数
 def get_args():
-    parser = argparse.ArgumentParser(description="MiniRAG")
-    parser.add_argument("--model", type=str, default="dpsk")  # 指定LLM模型
-    parser.add_argument("--outputpath", type=str, default="./tests/dpsk/Default_output.csv")  # 输出路径
-    parser.add_argument("--workingdir", type=str, default="./tests/dpsk")  # 工作目录
-    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World")  # 数据目录
-    parser.add_argument(
-        "--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv"
-    )  # 查询集路径
+    parser = argparse.ArgumentParser(description="MiniRAG - Optimized")
+    parser.add_argument("--model", type=str, default="qwen", help="指定LLM模型 (PHI/dpsk/glm/qwen)")
+    parser.add_argument("--outputpath", type=str, default="./tests/qwen06b/Default_output.csv", help="输出路径")
+    parser.add_argument("--workingdir", type=str, default="./tests/qwen06b", help="工作目录")
+    parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World", help="数据目录")
+    parser.add_argument("--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv", help="查询集路径")
+    # 优化参数
+    parser.add_argument("--max_workers", type=int, default=4, help="文件读取并发数 (默认: 4)")
+    parser.add_argument("--batch_size", type=int, default=4, help="每批文档数 (默认: 8)")
+    parser.add_argument("--llm_max_async", type=int, default=10, help="LLM最大并发数 (默认: 10)")
+    parser.add_argument("--rpm", type=int, default=600, help="API RPM限制 (默认: 600)")
+    parser.add_argument("--tpm", type=int, default=1000000, help="API TPM限制 (默认: 1000000)")
     args = parser.parse_args()
     return args
 
@@ -131,7 +189,7 @@ elif args.model == "dpsk":
 elif args.model == "glm":
     LLM_MODEL = "glm-4.5-air"
 elif args.model == "qwen":
-    LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
+    LLM_MODEL = "qwen3-0.6b"
 else:
     print("Invalid model name")
     exit(1)
@@ -142,9 +200,22 @@ DATA_PATH = args.datapath
 QUERY_PATH = args.querypath
 OUTPUT_PATH = args.outputpath
 
+# 更新速率限制器配置
+rate_limiter.rpm = args.rpm
+rate_limiter.tpm = args.tpm
+rate_limiter._req_rate = args.rpm / 60.0
+rate_limiter._token_rate = args.tpm / 60.0
 
-print("USING LLM:", LLM_MODEL)
-print("USING WORKING DIR:", WORKING_DIR)
+print("=" * 60)
+print("MiniRAG 优化版本")
+print("=" * 60)
+print(f"USING LLM: {LLM_MODEL}")
+print(f"USING WORKING DIR: {WORKING_DIR}")
+print(f"文件读取并发: {args.max_workers}")
+print(f"每批文档数: {args.batch_size}")
+print(f"LLM最大并发: {args.llm_max_async}")
+print(f"API速率限制: RPM={args.rpm}, TPM={args.tpm}")
+print("=" * 60)
 
 # 如果工作目录不存在则创建
 if not os.path.exists(WORKING_DIR):
@@ -160,20 +231,26 @@ embed_model = AutoModel.from_pretrained(
     dtype=torch.float16,  # 降低显存占用
 )
 
-# 初始化MiniRAG对象
+# 初始化MiniRAG对象（优化配置）
+# 注意：enable_thinking 只支持流式调用，MiniRAG使用非流式调用，必须显式设为 False
 rag = MiniRAG(
     working_dir=WORKING_DIR,
-    llm_model_func=openai_server_complete,  # 使用 OpenAI API                                       
-    llm_model_max_token_size=8192,          # LLM最大token数（输入+输出总和）
-    llm_model_name=LLM_MODEL,            # 模型名称
-    embedding_batch_num=16,                 # 减小embedding批次大小，降低显存占用（默认32）
+    llm_model_func=openai_server_complete,
+    llm_model_max_token_size=8192,
+    llm_model_name=LLM_MODEL,
+    llm_model_max_async=args.llm_max_async,  # LLM最大并发数
+    llm_model_kwargs={
+        "extra_body": {"enable_thinking": False},  # 非流式调用必须显式禁用
+    },
+    embedding_batch_num=32,  # 增大embedding批次
+    embedding_func_max_async=16,  # embedding并发
     embedding_func=EmbeddingFunc(
-        embedding_dim=384,                  # 嵌入维度
-        max_token_size=1000,                # 嵌入最大token数
+        embedding_dim=384,
+        max_token_size=1000,
         func=lambda texts: hf_embed(
             texts,
-            tokenizer=tokenizer,            # 复用分词器
-            embed_model=embed_model,        # 复用模型
+            tokenizer=tokenizer,
+            embed_model=embed_model,
         ),
     ),
 )
@@ -204,45 +281,67 @@ def find_txt_files(root_path):
     return txt_files
 from tqdm import tqdm
 
-# WEEK_LIST = find_txt_files(BATCH_TEST_DATAPATH)
-#测试batch大小
+# 查找所有txt文件
 WEEK_LIST = find_txt_files(DATA_PATH)
-# 获取所有txt文件路径
-print(f"共找到 {len(WEEK_LIST)} 个txt文件，开始处理...")
 
-# 使用线程池并行读取文件，按批次边读边插入，避免一次性占用大量内存
-def load_txt_file(path: str):
-    """加载文本文件，返回文件路径和内容"""
+# 预过滤：只保留未处理的文件
+remaining_files = []
+for path in WEEK_LIST:
     with open(path, "r", encoding="utf-8") as f:
-        return path, f.read()
+        content = f.read()
+        doc_id = compute_mdhash_id(content, prefix="doc-")
+        if doc_id not in processed_doc_ids:
+            remaining_files.append((path, content))
 
-# print("CPU核心数:", os.cpu_count())
-max_workers = 2  # 降低并发数，避免API请求过于集中
-BATCH_SIZE = 2   # 减小单批文档数，降低单次显存压力
+print(f"共找到 {len(WEEK_LIST)} 个txt文件")
+print(f"其中 {len(remaining_files)} 个待处理，{len(WEEK_LIST) - len(remaining_files)} 个已跳过")
+
+if not remaining_files:
+    print("所有文件已处理完成！")
+    exit(0)
+
+# 使用线程池并行处理文件
+def process_file(item):
+    """处理单个文件：返回内容"""
+    path, content = item
+    return content
+
 buffer = []
-with ThreadPoolExecutor(max_workers=max_workers) as executor:
-    futures = [executor.submit(load_txt_file, path) for path in WEEK_LIST]
+start_time = time.time()
+processed_count = 0
+
+with ThreadPoolExecutor(max_workers=args.max_workers) as executor:
+    futures = [executor.submit(process_file, item) for item in remaining_files]
+
     for future in tqdm(
         as_completed(futures),
-        total=len(WEEK_LIST),
-        desc="读取并插入",
+        total=len(remaining_files),
+        desc="处理文件",
         unit="file",
-        mininterval=1.0,  # 控制进度条刷新间隔（秒），可按需调整
+        mininterval=2.0,
     ):
-        file_path, content = future.result()
-
-        # 基于内容计算 doc_id（与 MiniRAG 内部一致的 MD5 前缀）
-        doc_id = compute_mdhash_id(content, prefix="doc-")
-        if doc_id in processed_doc_ids:
-            # 已处理文档，跳过
-            continue
-
+        content = future.result()
         buffer.append(content)
-        if len(buffer) >= BATCH_SIZE:
-            # 保持文档粒度，直接传列表，避免跨文件合并导致实体/关系混淆
+        processed_count += 1
+
+        if len(buffer) >= args.batch_size:
             rag.insert(buffer)
             buffer.clear()
+
+            # 显示进度统计
+            elapsed = time.time() - start_time
+            speed = processed_count / elapsed if elapsed > 0 else 0
+            print(f"  [进度] 已处理 {processed_count}/{len(remaining_files)} 文件, 速度: {speed:.2f} 文件/秒")
 
 # 插入剩余不足一批的内容
 if buffer:
     rag.insert(buffer)
+
+# 最终统计
+elapsed = time.time() - start_time
+print("\n" + "=" * 60)
+print("处理完成！")
+print(f"总文件数: {len(remaining_files)}")
+print(f"总耗时: {elapsed:.2f} 秒")
+print(f"平均速度: {len(remaining_files) / elapsed:.2f} 文件/秒")
+print("=" * 60)
