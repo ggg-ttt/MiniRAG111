@@ -1,3 +1,5 @@
-
+light模式dpsk回答，平均输入2834.58tokens,平均输出87.75
+naive模式dpsk回答，平均输入50,322.92tokens,平均输出1,427.98
 mini模式dpsk回答，平均输入1,913.92tokens,平均输出44.69
-minirag的index构建，平均输入2,861.86tokens，平均输出310.19tokens
+minirag的qwen3-0.6B的index构建，平均输入2,861.86tokens，平均输出310.19tokens
+miniRAG的dpsk-V3.2的index构建，平均输入3,743.79 tokens，平均输出609.21 tokens
