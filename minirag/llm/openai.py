@@ -78,6 +78,10 @@ import numpy as np
 from typing import Union
 
 
+class GPTKeywordExtractionFormat(BaseModel):
+    high_level_keywords: List[str]
+    low_level_keywords: List[str]
+
 @retry(
     stop=stop_after_attempt(3),
     wait=wait_exponential(multiplier=1, min=4, max=10),
@@ -85,11 +89,6 @@ from typing import Union
         (RateLimitError, APIConnectionError, APITimeoutError)
     ),
 )
-
-class GPTKeywordExtractionFormat(BaseModel):
-    high_level_keywords: List[str]
-    low_level_keywords: List[str]
-
 async def openai_complete_if_cache(
     model,
     prompt,
@@ -106,9 +105,11 @@ async def openai_complete_if_cache(
     # 创建 OpenAI 客户端，确保传递 api_key（即使是 dummy key）
     # 如果 api_key 未设置，使用环境变量或 dummy key
     client_api_key = api_key or os.environ.get("OPENAI_API_KEY", "dummy")
+    # 获取超时设置，默认60秒
+    timeout = kwargs.pop("timeout", 60.0)
     openai_async_client = (
-        AsyncOpenAI(api_key=client_api_key) if base_url is None 
-        else AsyncOpenAI(base_url=base_url, api_key=client_api_key)
+        AsyncOpenAI(api_key=client_api_key, timeout=timeout) if base_url is None
+        else AsyncOpenAI(base_url=base_url, api_key=client_api_key, timeout=timeout)
     )
     kwargs.pop("hashing_kv", None)
     kwargs.pop("keyword_extraction", None)

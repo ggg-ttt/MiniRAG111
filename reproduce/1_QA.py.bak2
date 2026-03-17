@@ -36,11 +36,11 @@ EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 def get_args():
     parser = argparse.ArgumentParser(description="MiniRAG")
     parser.add_argument("--model", type=str, default="dpsk")
-    parser.add_argument("--outputpath", type=str, default="./tests/dpsk_mini/dpsk_light_output.csv")
-    parser.add_argument("--workingdir", type=str, default="./tests/dpsk_mini")
+    parser.add_argument("--outputpath", type=str, default="./tests/dpsk_light/dpsk_light_output.csv")
+    parser.add_argument("--workingdir", type=str, default="./tests/dpsk_light")
     parser.add_argument("--datapath", type=str, default="./dataset/LiHua-World/data/LiHua-World/")
     parser.add_argument("--querypath", type=str, default="./dataset/LiHua-World/qa/query_set.csv")
-    parser.add_argument("--mode", type=str, default="mini", choices=["naive", "light", "mini"])
+    parser.add_argument("--mode", type=str, default="light", choices=["naive", "light", "mini"])
 
     parser.add_argument(
         "--resume",
@@ -48,34 +48,23 @@ def get_args():
         default=True,
         help="断点续跑：跳过输出文件里已经有结果的行，仅补全空结果行",
     )
-    # parser.add_argument(
-    #     "--no-resume",
-    #     action="store_false",
-    #     dest="resume",
-    #     help="关闭断点续跑：即使已有结果也重新计算",
-    # )
+    parser.add_argument(
+        "--no-resume",
+        action="store_false",
+        dest="resume",
+        help="关闭断点续跑：即使已有结果也重新计算",
+    )
 
     # 并发与稳定性参数
     parser.add_argument("--query_concurrency", type=int, default=4, help="外层问题并发数")
     parser.add_argument("--llm_max_async", type=int, default=8, help="MiniRAG内部LLM最大并发")
     parser.add_argument("--embedding_max_async", type=int, default=16, help="MiniRAG内部embedding最大并发")
     parser.add_argument("--save_every", type=int, default=50, help="每处理多少条就落盘一次")
-    parser.add_argument("--api_timeout", type=float, default=180.0, help="单次LLM请求超时秒数")
+    parser.add_argument("--api_timeout", type=float, default=300.0, help="单次LLM请求超时秒数")
 
     # 实时吞吐统计参数
     parser.add_argument("--stats_interval_sec", type=int, default=60, help="实时统计打印间隔（秒）")
     parser.add_argument("--stall_warn_sec", type=int, default=300, help="超过该秒数无完成请求时打印告警")
-    parser.add_argument("--question_timeout_sec", type=float, default=300.0, help="单个问题整体超时秒数，0 表示不限制")
-
-    # 自动升档参数（仅调整外层query并发）
-    parser.set_defaults(auto_scale_query=True)
-    parser.add_argument("--auto_scale_query", action="store_true", dest="auto_scale_query", help="开启外层query并发自动升档")
-    parser.add_argument("--no_auto_scale_query", action="store_false", dest="auto_scale_query", help="关闭外层query并发自动升档")
-    parser.add_argument("--auto_scale_start_query", type=int, default=2, help="自动升档起始query并发")
-    parser.add_argument("--auto_scale_step_query", type=int, default=1, help="每次升档增加的query并发")
-    parser.add_argument("--auto_scale_stable_windows", type=int, default=2, help="连续稳定窗口数达到后触发升档")
-    parser.add_argument("--auto_scale_min_completed", type=int, default=1, help="判定稳定窗口所需最少完成请求数")
-    parser.add_argument("--auto_scale_min_success_rate", type=float, default=95.0, help="判定稳定窗口所需最小成功率(%)")
 
     return parser.parse_args()
 
@@ -106,13 +95,6 @@ print("并发配置: query_concurrency=", args.query_concurrency,
       "llm_max_async=", args.llm_max_async,
       "embedding_max_async=", args.embedding_max_async)
 print("实时统计: interval=", args.stats_interval_sec, "sec")
-if args.auto_scale_query:
-    print(
-        "自动升档: start_query=", args.auto_scale_start_query,
-        "step=", args.auto_scale_step_query,
-        "stable_windows=", args.auto_scale_stable_windows,
-        "max_query=", args.query_concurrency,
-    )
 
 if not os.path.exists(WORKING_DIR):
     os.mkdir(WORKING_DIR)
@@ -201,31 +183,6 @@ class TokenStats:
             }
 
 
-class ErrorStats:
-    """线程安全的失败类型统计器（异步环境）。"""
-
-    def __init__(self):
-        self._lock = asyncio.Lock()
-        self._global = {}
-        self._window = {}
-
-    async def record(self, reason: str):
-        key = str(reason or "unknown").lower()
-        async with self._lock:
-            self._global[key] = self._global.get(key, 0) + 1
-            self._window[key] = self._window.get(key, 0) + 1
-
-    async def take_window(self):
-        async with self._lock:
-            snap = dict(self._window)
-            self._window = {}
-            return snap
-
-    async def summary(self):
-        async with self._lock:
-            return dict(self._global)
-
-
 class QueryProgress:
     """跟踪任务进展，用于长时间无进展告警。"""
 
@@ -260,72 +217,25 @@ class QueryProgress:
             }
 
 
-class AdaptiveLimiter:
-    """可动态调整上限的异步并发限流器。"""
-
-    def __init__(self, initial_limit: int):
-        self._limit = max(1, int(initial_limit))
-        self._inflight = 0
-        self._cond = asyncio.Condition()
-
-    async def acquire(self):
-        async with self._cond:
-            while self._inflight >= self._limit:
-                await self._cond.wait()
-            self._inflight += 1
-
-    async def release(self):
-        async with self._cond:
-            if self._inflight > 0:
-                self._inflight -= 1
-            self._cond.notify_all()
-
-    async def resize(self, new_limit: int):
-        async with self._cond:
-            self._limit = max(1, int(new_limit))
-            self._cond.notify_all()
-
-    async def snapshot(self):
-        async with self._cond:
-            return {
-                "limit": self._limit,
-                "inflight": self._inflight,
-            }
-
-
 # 全局Token统计器
 GLOBAL_TOKEN_STATS = TokenStats()
-# 全局失败原因统计器
-GLOBAL_ERROR_STATS = ErrorStats()
 
 
 async def stats_reporter(
     stats: ThroughputStats,
     progress: QueryProgress,
-    limiter: AdaptiveLimiter,
     stop_event: asyncio.Event,
     interval_sec: int,
     stall_warn_sec: int,
-    enable_auto_scale: bool,
-    max_query_concurrency: int,
-    scale_step: int,
-    stable_windows_needed: int,
-    min_completed_per_window: int,
-    min_success_rate: float,
 ):
     alerted_at_completed = -1
-    stable_windows = 0
-
     while True:
         try:
             await asyncio.wait_for(stop_event.wait(), timeout=interval_sec)
             break
         except asyncio.TimeoutError:
             window = await stats.take_window()
-            error_window = await GLOBAL_ERROR_STATS.take_window()
             progress_snapshot = await progress.snapshot()
-            limiter_snapshot = await limiter.snapshot()
-            warned_this_window = False
 
             # 若长时间没有任何任务完成，打印一次告警；任务完成后会自动解除本轮告警状态
             if (
@@ -336,16 +246,12 @@ async def stats_reporter(
                 print(
                     f"[warn] {progress_snapshot['idle_sec']:.1f}s 无新完成请求，"
                     f"inflight={progress_snapshot['inflight']}, "
-                    f"completed={progress_snapshot['completed']}/{progress_snapshot['total']}, "
-                    f"limit={limiter_snapshot['limit']}"
+                    f"completed={progress_snapshot['completed']}/{progress_snapshot['total']}"
                 )
                 alerted_at_completed = progress_snapshot["completed"]
-                warned_this_window = True
-                stable_windows = 0
 
             if window["count"] == 0:
-                print(f"[stats] 最近窗口无完成请求 (limit={limiter_snapshot['limit']})")
-                stable_windows = 0
+                print("[stats] 最近窗口无完成请求")
                 continue
 
             if progress_snapshot["completed"] != alerted_at_completed:
@@ -354,47 +260,13 @@ async def stats_reporter(
             rpm = window["count"] * 60.0 / interval_sec
             avg_latency = window["latency_sum"] / window["count"]
             success_rate = window["success"] * 100.0 / window["count"]
-            fail_detail = ""
-            if error_window:
-                detail = ", ".join(f"{k}:{v}" for k, v in sorted(error_window.items()))
-                fail_detail = f", fail_detail={{ {detail} }}"
-
             print(
                 f"[stats] 最近{interval_sec}s: "
                 f"RPM={rpm:.2f}, "
                 f"AvgLatency={avg_latency:.2f}s, "
                 f"SuccessRate={success_rate:.2f}% "
-                f"(ok={window['success']}, fail={window['fail']}), "
-                f"limit={limiter_snapshot['limit']}"
-                f"{fail_detail}"
+                f"(ok={window['success']}, fail={window['fail']})"
             )
-
-            if not enable_auto_scale:
-                continue
-            if progress_snapshot["pending"] <= 0:
-                continue
-            if warned_this_window:
-                continue
-
-            is_stable = (
-                window["count"] >= min_completed_per_window
-                and success_rate >= min_success_rate
-                and window["fail"] == 0
-            )
-
-            if is_stable:
-                stable_windows += 1
-            else:
-                stable_windows = 0
-
-            if stable_windows >= stable_windows_needed and limiter_snapshot["limit"] < max_query_concurrency:
-                new_limit = min(max_query_concurrency, limiter_snapshot["limit"] + max(1, scale_step))
-                await limiter.resize(new_limit)
-                stable_windows = 0
-                print(
-                    f"[autoscale] 升档 query_concurrency: "
-                    f"{limiter_snapshot['limit']} -> {new_limit}"
-                )
 
 
 async def vllm_server_complete(prompt, system_prompt=None, history_messages=None, keyword_extraction=False, **kwargs):
@@ -550,24 +422,14 @@ def load_rows(output_path, result_column):
 
 async def aquery_one(question: str, mode: str):
     started = time.perf_counter()
-    timeout = args.question_timeout_sec if args.question_timeout_sec > 0 else None
     try:
-        coro = rag.aquery(question, param=build_query_param(mode))
-        answer = await asyncio.wait_for(coro, timeout=timeout)
+        answer = await rag.aquery(question, param=build_query_param(mode))
         latency = time.perf_counter() - started
         cleaned = str(answer).replace("\n", "").replace("\r", "")
         return cleaned, True, latency
-    except asyncio.TimeoutError:
-        latency = time.perf_counter() - started
-        q_prefix = question[:50].replace("\n", " ")
-        await GLOBAL_ERROR_STATS.record("timeout")
-        print(f"[timeout] {latency:.1f}s question={q_prefix!r}")
-        return "Timeout", False, latency
     except Exception as e:
         latency = time.perf_counter() - started
-        reason = f"error:{type(e).__name__}"
-        await GLOBAL_ERROR_STATS.record(reason)
-        print(f"Error in minirag_answer ({type(e).__name__}): {e}")
+        print(f"Error in minirag_answer: {e}")
         return "Error", False, latency
 
 
@@ -588,11 +450,7 @@ async def fill_answers_concurrently(rows, result_column, mode, resume, output_pa
             print(f"断点续跑已跳过 {skipped_count} 条已有结果")
         return 0, skipped_count, 0.0
 
-    initial_query_limit = args.query_concurrency
-    if args.auto_scale_query:
-        initial_query_limit = max(1, min(args.auto_scale_start_query, args.query_concurrency))
-
-    limiter = AdaptiveLimiter(initial_query_limit)
+    semaphore = asyncio.Semaphore(args.query_concurrency)
     stats = ThroughputStats()
     progress = QueryProgress(total_tasks=len(pending_indices))
     stop_event = asyncio.Event()
@@ -600,29 +458,19 @@ async def fill_answers_concurrently(rows, result_column, mode, resume, output_pa
         stats_reporter(
             stats=stats,
             progress=progress,
-            limiter=limiter,
             stop_event=stop_event,
             interval_sec=args.stats_interval_sec,
             stall_warn_sec=args.stall_warn_sec,
-            enable_auto_scale=args.auto_scale_query,
-            max_query_concurrency=args.query_concurrency,
-            scale_step=args.auto_scale_step_query,
-            stable_windows_needed=args.auto_scale_stable_windows,
-            min_completed_per_window=args.auto_scale_min_completed,
-            min_success_rate=args.auto_scale_min_success_rate,
         )
     )
 
     async def worker(idx: int):
-        await limiter.acquire()
-        await progress.mark_start()
-        question = rows[idx]["Question"]
-        try:
+        async with semaphore:
+            await progress.mark_start()
+            question = rows[idx]["Question"]
             answer, success, latency = await aquery_one(question, mode)
-            return idx, answer, success, latency
-        finally:
             await progress.mark_done()
-            await limiter.release()
+            return idx, answer, success, latency
 
     tasks = [asyncio.create_task(worker(i)) for i in pending_indices]
 
@@ -659,11 +507,6 @@ async def fill_answers_concurrently(rows, result_column, mode, resume, output_pa
             f"SuccessRate={success_rate:.2f}% "
             f"(ok={summary['success']}, fail={summary['fail']})"
         )
-
-        fail_summary = await GLOBAL_ERROR_STATS.summary()
-        if fail_summary:
-            detail = ", ".join(f"{k}:{v}" for k, v in sorted(fail_summary.items()))
-            print(f"[stats-final] 失败类型统计: {{ {detail} }}")
 
     if resume:
         print(f"断点续跑已跳过 {skipped_count} 条已有结果")
@@ -761,23 +604,3 @@ def run_experiment(output_path, mode: str, resume: bool = True):
 
 if __name__ == "__main__":
     run_experiment(OUTPUT_PATH, mode=args.mode, resume=args.resume)
-
-    """
-    python3 reproduce/1_QA.py \
-  --mode mini \
-  --resume \
-  --query_concurrency 8 \
-  --llm_max_async 12 \
-  --embedding_max_async 16 \
-  --api_timeout 180 \
-  --question_timeout_sec 180 \
-  --stats_interval_sec 60 \
-  --stall_warn_sec 180 \
-  --auto_scale_query \
-  --auto_scale_start_query 2 \
-  --auto_scale_step_query 1 \
-  --auto_scale_stable_windows 2 \
-  --auto_scale_min_completed 1 \
-  --auto_scale_min_success_rate 95 \
-  --save_every 50
-    """

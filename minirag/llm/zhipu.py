@@ -71,44 +71,32 @@ from minirag.utils import (
     logger,
 )
 
-from minirag.types import GPTKeywordExtractionFormat
+from minirag.llm.openai import GPTKeywordExtractionFormat
 
 import numpy as np
 from typing import Union, List, Optional, Dict
 
 
-@retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=1, min=4, max=10),
-    retry=retry_if_exception_type(
-        (RateLimitError, APIConnectionError, APITimeoutError)
-    ),
-)
 async def zhipu_complete_if_cache(
     prompt: Union[str, List[Dict[str, str]]],
-    model: str = "glm-4-flashx",  # The most cost/performance balance model in glm-4 series
+    model: str = "glm-4.7-flash",
     api_key: Optional[str] = None,
     system_prompt: Optional[str] = None,
     history_messages: List[Dict[str, str]] = [],
     **kwargs,
 ) -> str:
-    # dynamically load ZhipuAI
+    # dynamically load zhipuai
     try:
         from zhipuai import ZhipuAI
     except ImportError:
-        raise ImportError("Please install zhipuai before initialize zhipuai backend.")
+        raise ImportError("Please install zhipuai: pip install zhipuai")
 
     if api_key:
         client = ZhipuAI(api_key=api_key)
     else:
-        # please set ZHIPUAI_API_KEY in your environment
-        # os.environ["ZHIPUAI_API_KEY"]
         client = ZhipuAI()
 
     messages = []
-
-    if not system_prompt:
-        system_prompt = "You are a helpful assistant. Note that sensitive words in the content should be replaced with ***"
 
     # Add system prompt if provided
     if system_prompt:
@@ -131,6 +119,13 @@ async def zhipu_complete_if_cache(
     return response.choices[0].message.content
 
 
+@retry(
+    stop=stop_after_attempt(3),
+    wait=wait_exponential(multiplier=1, min=4, max=10),
+    retry=retry_if_exception_type(
+        (RateLimitError, APIConnectionError, APITimeoutError)
+    ),
+)
 async def zhipu_complete(
     prompt, system_prompt=None, history_messages=[], keyword_extraction=False, **kwargs
 ):
@@ -219,16 +214,14 @@ async def zhipu_complete(
 async def zhipu_embedding(
     texts: list[str], model: str = "embedding-3", api_key: str = None, **kwargs
 ) -> np.ndarray:
-    # dynamically load ZhipuAI
+    # dynamically load zhipuai
     try:
         from zhipuai import ZhipuAI
     except ImportError:
-        raise ImportError("Please install zhipuai before initialize zhipuai backend.")
+        raise ImportError("Please install zhipuai: pip install zhipuai")
     if api_key:
         client = ZhipuAI(api_key=api_key)
     else:
-        # please set ZHIPUAI_API_KEY in your environment
-        # os.environ["ZHIPUAI_API_KEY"]
         client = ZhipuAI()
 
     # Convert single text to list if needed
