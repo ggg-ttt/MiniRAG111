@@ -2852,7 +2852,10 @@ async def path2chunk(
         - 投票优化：利用边投票机制过滤低质量连接，提升精度
     """
     # 初始化已处理节点字典，用于缓存已处理过的节点文本块信息，避免重复计算
+    # key=实体名, value=经过相似度筛选后的文本块ID列表（None表示该节点不贡献文本块）
     already_node = {}
+    # 缓存pathtuple[0]（主实体）的source_id分割结果，避免对同一实体重复解析
+    already_source = {}
     
     # 遍历带分数的路径字典中的每个实体及其路径信息
     for k, v in scored_edged_reasoning_path.items():
@@ -2880,18 +2883,21 @@ async def path2chunk(
                 use_edge = []
                 text_units = []
 
-            # 并发获取路径第一个节点的数据
-            node_datas = await asyncio.gather(
-                *[knowledge_graph_inst.get_node(pathtuple[0])]
-            )
-            # 处理第一个节点的文本块ID
-            for dp in node_datas:
-                # 从节点的source_id中提取文本块ID
-                text_units_node = split_string_by_multi_markers(
-                    dp["source_id"], [GRAPH_FIELD_SEP]
+            # 【优化】pathtuple[0]（当前实体）使用already_source缓存，避免对同一实体
+            # 重复执行get_node和source_id字符串解析（高度节点如LIHUA有71054条路径，
+            # 若不缓存则source_id字符串被重复解析71054次）
+            if pathtuple[0] not in already_source:
+                node_datas_0 = await asyncio.gather(
+                    *[knowledge_graph_inst.get_node(pathtuple[0])]
                 )
-                # 将节点文本块ID添加到总体文本单元列表
-                text_units = text_units + text_units_node
+                cached_src = []
+                for dp in node_datas_0:
+                    if dp is not None:
+                        cached_src = split_string_by_multi_markers(
+                            dp["source_id"], [GRAPH_FIELD_SEP]
+                        )
+                already_source[pathtuple[0]] = cached_src
+            text_units = text_units + already_source[pathtuple[0]]
 
             # 并发获取路径中剩余所有节点的数据
             node_datas = await asyncio.gather(
@@ -2899,41 +2905,34 @@ async def path2chunk(
             )
             # 当查询不为空时，基于查询相关性进行文本块筛选
             if query is not None:
-                for dp in node_datas:
-                    # 提取节点的文本块ID
-                    text_units_node = split_string_by_multi_markers(
-                        dp["source_id"], [GRAPH_FIELD_SEP]
-                    )
-                    # 提取节点的描述信息
-                    descriptionlist_node = split_string_by_multi_markers(
-                        dp["description"], [GRAPH_FIELD_SEP]
-                    )
-                    
-                    # 检查节点描述是否已处理过，避免重复计算
-                    if descriptionlist_node[0] not in already_node.keys():
-                        # 标记当前节点已处理
-                        already_node[descriptionlist_node[0]] = None
+                for ent_name, dp in zip(pathtuple[1:], node_datas):
+                    if dp is None:
+                        continue
 
-                        # 当文本块ID数量与描述数量匹配时进行相似度筛选
+                    # 先查缓存：命中后直接复用，避免重复split和相似度计算
+                    if ent_name in already_node:
+                        text_units_node = already_node[ent_name]
+                    else:
+                        text_units_node = split_string_by_multi_markers(
+                            dp["source_id"], [GRAPH_FIELD_SEP]
+                        )
+                        descriptionlist_node = split_string_by_multi_markers(
+                            dp["description"], [GRAPH_FIELD_SEP]
+                        )
+
                         if len(text_units_node) == len(descriptionlist_node):
-                            # 当文本块数量超过5个时进行智能筛选
                             if len(text_units_node) > 5:
-                                # 计算需要考虑的最大ID数量，至少5个或总数量的一半
                                 max_ids = int(max(5, len(text_units_node) / 2))
-                                # 计算描述与查询的相似度，选择最相关的前max_ids个描述
                                 should_consider_idx = calculate_similarity(
                                     descriptionlist_node, query, k=max_ids
                                 )
-                                # 根据相似度结果筛选文本块ID
                                 text_units_node = [
                                     text_units_node[i] for i in should_consider_idx
                                 ]
-                                # 缓存筛选后的文本块ID
-                                already_node[descriptionlist_node[0]] = text_units_node
-                    else:
-                        # 如果节点已处理，直接使用缓存的文本块ID
-                        text_units_node = already_node[descriptionlist_node[0]]
-                    
+
+                        # 缓存首次计算结果，后续同实体直接复用
+                        already_node[ent_name] = text_units_node
+
                     # 将节点文本块ID添加到总体文本单元列表
                     if text_units_node is not None:
                         text_units = text_units + text_units_node
