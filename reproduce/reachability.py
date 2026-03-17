@@ -225,11 +225,15 @@ def call_openai_compatible(
     api_key: str,
     base_url: str,
     model: str,
+    prompt_mode: str = "mini",
     timeout_s: int = 60,
 ) -> List[str]:
     """Return extracted start entities as a list of strings."""
 
-    system_prompt = system_prompt_mini.format(query=question)
+    if prompt_mode == "light":
+        system_prompt = system_prompt_light.format(query=question)
+    else:
+        system_prompt = system_prompt_mini.format(query=question)
     user_prompt = "Return only JSON."
 
     client = OpenAI(api_key=api_key, base_url=base_url, timeout=timeout_s)
@@ -260,18 +264,35 @@ def call_openai_compatible(
         parsed = json.loads(content)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse LLM JSON response: {content[:500]}") from e
-    # Compatible with both legacy key and mini prompt key.
-    arr = parsed.get("start_entities", parsed.get("entities_from_query", []))
-    if not isinstance(arr, list):
-        return []
+    if prompt_mode == "light":
+        # For light prompt experiments, use both low/high level keywords as start nodes.
+        low_level = parsed.get("low_level_keywords", [])
+        high_level = parsed.get("high_level_keywords", [])
+        if isinstance(low_level, list) and isinstance(high_level, list):
+            raw_entities = low_level + high_level
+        elif isinstance(low_level, list):
+            raw_entities = low_level
+        elif isinstance(high_level, list):
+            raw_entities = high_level
+        else:
+            raw_entities = []
+    else:
+        # Compatible with both legacy key and mini prompt key.
+        raw_entities = parsed.get("start_entities", parsed.get("entities_from_query", []))
 
-    res = []
-    for x in arr:
-        if isinstance(x, str):
-            t = x.strip()
-            if t:
-                res.append(t)
-    return res
+    if isinstance(raw_entities, str):
+        return [x.strip() for x in re.split(r"[,\n;，、]+", raw_entities) if x.strip()]
+
+    if isinstance(raw_entities, list):
+        res: List[str] = []
+        for x in raw_entities:
+            if isinstance(x, str):
+                t = x.strip()
+                if t:
+                    res.append(t)
+        return res
+
+    return []
 
 
 def match_candidates(name: str, norm_to_names: Dict[str, Set[str]]) -> Set[str]:
@@ -292,6 +313,12 @@ def main() -> int:
     parser.add_argument("--k", type=int, default=3)
     parser.add_argument("--out-json", required=True, type=Path)
     parser.add_argument("--out-csv", required=True, type=Path)
+    parser.add_argument(
+        "--prompt-mode",
+        choices=["mini", "light"],
+        default="mini",
+        help="Prompt template used for start-node extraction.",
+    )
     parser.add_argument("--sleep-ms", type=int, default=0, help="Sleep between LLM calls.")
     parser.add_argument(
         "--max-samples",
@@ -301,11 +328,12 @@ def main() -> int:
     )
     args = parser.parse_args()
 
-    # Use mini-prefixed output artifacts for this experiment variant.
-    args.out_json = ensure_prefixed_filename(args.out_json, "mini_")
-    args.out_csv = ensure_prefixed_filename(args.out_csv, "mini_")
+    # Use mode-specific prefixed output artifacts for this experiment variant.
+    out_prefix = "hybird_" if args.prompt_mode == "light" else "mini_"
+    args.out_json = ensure_prefixed_filename(args.out_json, out_prefix)
+    args.out_csv = ensure_prefixed_filename(args.out_csv, out_prefix)
 
-    api_key = os.getenv("DASHSCOPE_API_KEY", "").strip()
+    api_key = os.getenv("DASHSCOPE_API_KEY", "sk-9bd27b29acd84309a7983d183fc14cd0").strip()
     base_url = os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1").strip()
     model = os.getenv("DASHSCOPE_MODEL", "qwen3-1.7b").strip()
 
@@ -347,6 +375,7 @@ def main() -> int:
             api_key=api_key,
             base_url=base_url,
             model=model,
+            prompt_mode=args.prompt_mode,
         )
         if args.sleep_ms > 0:
             time.sleep(args.sleep_ms / 1000.0)
