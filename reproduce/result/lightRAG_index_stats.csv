@@ -1,0 +1,694 @@
+﻿metric,metric_zh,relation_type,value
+
+unique_relation_count,1201
+unique_entities_per_relation_avg,4.15154
+relation_diversity_per_pair_avg,2.47258
+isolated_node_ratio,0.403969
+largest_weakly_connected_component_ratio,0.540043
+directed_density,0.0007665204
+entity_count,实体数,,1412
+relation_count,关系数,,1525
+average_node_degree,平均节点度,,2.160057
+largest_connected_component_size,最大连通分量大小,,762
+relation_diversity,关系多样性,,0.443934
+duplicate_entity_rate,重复实体率,,0.001416
+duplicate_relation_description_rate,重复关系表述率,,0.015738
+
+unique_entities_per_relation,每种关系连接的唯一实体数,"""Exercise",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""activity planning",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""agreement",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""artistic interest",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""associated activity",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""attendance",4
+unique_entities_per_relation,每种关系连接的唯一实体数,"""band",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""captivating moments",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""collaboration",15
+unique_entities_per_relation,每种关系连接的唯一实体数,"""community",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""delivery",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""documentation",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""employment",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""entertainment",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""enthusiasm",10
+unique_entities_per_relation,每种关系连接的唯一实体数,"""event attendance",4
+unique_entities_per_relation,每种关系连接的唯一实体数,"""event planning",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""excitement",12
+unique_entities_per_relation,每种关系连接的唯一实体数,"""expectation",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""expertise",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""exploration",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""favorite show",4
+unique_entities_per_relation,每种关系连接的唯一实体数,"""financial obligations",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""food enjoyment",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""food preference",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""freelancer",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""friendship",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""gaming interest",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""genre mixing",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""group purchase",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""health",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""holiday celebration",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""hosting",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""information sharing",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""interest",9
+unique_entities_per_relation,每种关系连接的唯一实体数,"""introduction",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""invitation",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""involvement",4
+unique_entities_per_relation,每种关系连接的唯一实体数,"""joint activity",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""leadership approaches",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""meal planning",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""meeting location",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""meeting plan",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""member",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""music",5
+unique_entities_per_relation,每种关系连接的唯一实体数,"""mutual appreciation",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""organization",4
+unique_entities_per_relation,每种关系连接的唯一实体数,"""ownership",7
+unique_entities_per_relation,每种关系连接的唯一实体数,"""participation",16
+unique_entities_per_relation,每种关系连接的唯一实体数,"""past interest",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""personal conversation",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""planner",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""preference",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""preparation",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""product",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""professional interest",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""promotion",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""reference",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""related topics",5
+unique_entities_per_relation,每种关系连接的唯一实体数,"""reminder",6
+unique_entities_per_relation,每种关系连接的唯一实体数,"""request",5
+unique_entities_per_relation,每种关系连接的唯一实体数,"""responsibility",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""scheduling",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""service offer",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""shared goal",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""shared interest",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""shopping",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""social",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""social interaction",5
+unique_entities_per_relation,每种关系连接的唯一实体数,"""social plan",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""solution",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""song choice",4
+unique_entities_per_relation,每种关系连接的唯一实体数,"""song selection",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""source",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""sports",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""stress relief",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""suggestion",8
+unique_entities_per_relation,每种关系连接的唯一实体数,"""support",6
+unique_entities_per_relation,每种关系连接的唯一实体数,"""teaching",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""transaction",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""travel",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""treatment",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""user",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""work on song",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout discussion",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout location",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout plan",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout preferences",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout preparation",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout session",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workout technique",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"""workplace",2
+unique_entities_per_relation,每种关系连接的唯一实体数,2014 World Cup is a significant event in Messi's career,2
+unique_entities_per_relation,每种关系连接的唯一实体数,20261127_17:00,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"AI Robots""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,AdamSmith,2
+unique_entities_per_relation,每种关系连接的唯一实体数,AdamSmith is a person who is discussing air conditioner options with Li Hua.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,AdamSmith is a person who is involved in the playground equipment installation project and contributes ideas for the project.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"AdamSmith""",4
+unique_entities_per_relation,每种关系连接的唯一实体数,Alex,4
+unique_entities_per_relation,每种关系连接的唯一实体数,"Alex""",5
+unique_entities_per_relation,每种关系连接的唯一实体数,Amalfi Coast,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Big Bang Theory""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Breach""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Bronwyn""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,ChaeSong-hwa is a person who is part of a group planning a music jam session.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Community,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Community Garden,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Death Stranding,2
+unique_entities_per_relation,每种关系连接的唯一实体数,EmilyBurnett,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Garden Renovation""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,Gym,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Helios,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Hike""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,JakeWatson,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Jasper recommends the 2005 final between Liverpool and AC Milan as a classic match.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Jennifer""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,JenniferMoore,4
+unique_entities_per_relation,每种关系连接的唯一实体数,JenniferMoore is a fitness coach who reminds her clients to check in with her about their fitness progress and offers personalized advice.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,JenniferMoore is a person who recommends ladder drills and shares tips for keeping workouts fresh and fun.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"JenniferMoore""",4
+unique_entities_per_relation,每种关系连接的唯一实体数,John,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"John Denver""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,LiHua,2
+unique_entities_per_relation,每种关系连接的唯一实体数,LiHua is a participant in a discussion about games with stunning visuals.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"LiHua""",3
+unique_entities_per_relation,每种关系连接的唯一实体数,"Overwatch 3""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,Project,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Quillan""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,Rush is a band known for Neil Peart's drumming.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Saffron""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Sage""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,Sam Rivera is a member of a team working on communicating with an unknown intelligence,3
+unique_entities_per_relation,每种关系连接的唯一实体数,"Smith""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,Sunday,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Sunday is the day when LiHua and WolfgangSchulz plan to have their music jam.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,TV show discussion,3
+unique_entities_per_relation,每种关系连接的唯一实体数,"TV show discussion""",3
+unique_entities_per_relation,每种关系连接的唯一实体数,TV show discussions,2
+unique_entities_per_relation,每种关系连接的唯一实体数,TV show interest,7
+unique_entities_per_relation,每种关系连接的唯一实体数,"TV show interest""",3
+unique_entities_per_relation,每种关系连接的唯一实体数,TV show recommendation,3
+unique_entities_per_relation,每种关系连接的唯一实体数,ThaneChambers,2
+unique_entities_per_relation,每种关系连接的唯一实体数,The timestamp indicates the time when the conversation between HaileyJohnson and LiHua took place.,2
+unique_entities_per_relation,每种关系连接的唯一实体数,Viper,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"Viva la Vida""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,Westeros,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"WolfgangSchulz""",6
+unique_entities_per_relation,每种关系连接的唯一实体数,World Cup,2
+unique_entities_per_relation,每种关系连接的唯一实体数,absence,3
+unique_entities_per_relation,每种关系连接的唯一实体数,acceptance,2
+unique_entities_per_relation,每种关系连接的唯一实体数,achievement,4
+unique_entities_per_relation,每种关系连接的唯一实体数,acquisition,2
+unique_entities_per_relation,每种关系连接的唯一实体数,act of appreciation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,act of kindness,2
+unique_entities_per_relation,每种关系连接的唯一实体数,activity,28
+unique_entities_per_relation,每种关系连接的唯一实体数,activity context,2
+unique_entities_per_relation,每种关系连接的唯一实体数,activity focus,6
+unique_entities_per_relation,每种关系连接的唯一实体数,activity location,5
+unique_entities_per_relation,每种关系连接的唯一实体数,activity planning,2
+unique_entities_per_relation,每种关系连接的唯一实体数,adherence,2
+unique_entities_per_relation,每种关系连接的唯一实体数,admiration,4
+unique_entities_per_relation,每种关系连接的唯一实体数,advice,9
+unique_entities_per_relation,每种关系连接的唯一实体数,aesthetics,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"ag(""entity",2
+unique_entities_per_relation,每种关系连接的唯一实体数,agreement,53
+unique_entities_per_relation,每种关系连接的唯一实体数,agrees to location,2
+unique_entities_per_relation,每种关系连接的唯一实体数,agrees to plan,2
+unique_entities_per_relation,每种关系连接的唯一实体数,alignment,6
+unique_entities_per_relation,每种关系连接的唯一实体数,alliances,2
+unique_entities_per_relation,每种关系连接的唯一实体数,alternative,3
+unique_entities_per_relation,每种关系连接的唯一实体数,ambition,2
+unique_entities_per_relation,每种关系连接的唯一实体数,anticipation,10
+unique_entities_per_relation,每种关系连接的唯一实体数,appreciation,6
+unique_entities_per_relation,每种关系连接的唯一实体数,architecture,2
+unique_entities_per_relation,每种关系连接的唯一实体数,arrangement,3
+unique_entities_per_relation,每种关系连接的唯一实体数,artistic appreciation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,artistic interest,4
+unique_entities_per_relation,每种关系连接的唯一实体数,artistry,4
+unique_entities_per_relation,每种关系连接的唯一实体数,assignment,2
+unique_entities_per_relation,每种关系连接的唯一实体数,assistance,9
+unique_entities_per_relation,每种关系连接的唯一实体数,association,11
+unique_entities_per_relation,每种关系连接的唯一实体数,atmosphere,5
+unique_entities_per_relation,每种关系连接的唯一实体数,atmosphere enhancement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,attendance,12
+unique_entities_per_relation,每种关系连接的唯一实体数,attending event,2
+unique_entities_per_relation,每种关系连接的唯一实体数,availability,4
+unique_entities_per_relation,每种关系连接的唯一实体数,awareness,9
+unique_entities_per_relation,每种关系连接的唯一实体数,band,4
+unique_entities_per_relation,每种关系连接的唯一实体数,band member,4
+unique_entities_per_relation,每种关系连接的唯一实体数,band membership,5
+unique_entities_per_relation,每种关系连接的唯一实体数,band music,2
+unique_entities_per_relation,每种关系连接的唯一实体数,band organization,3
+unique_entities_per_relation,每种关系连接的唯一实体数,bandmates,2
+unique_entities_per_relation,每种关系连接的唯一实体数,beach scenery,2
+unique_entities_per_relation,每种关系连接的唯一实体数,beauty,2
+unique_entities_per_relation,每种关系连接的唯一实体数,behavior,2
+unique_entities_per_relation,每种关系连接的唯一实体数,beneficiary,3
+unique_entities_per_relation,每种关系连接的唯一实体数,benefit,2
+unique_entities_per_relation,每种关系连接的唯一实体数,benefits,3
+unique_entities_per_relation,每种关系连接的唯一实体数,betrayal,2
+unique_entities_per_relation,每种关系连接的唯一实体数,brainstorming,4
+unique_entities_per_relation,每种关系连接的唯一实体数,break,3
+unique_entities_per_relation,每种关系连接的唯一实体数,business,2
+unique_entities_per_relation,每种关系连接的唯一实体数,business owner,2
+unique_entities_per_relation,每种关系连接的唯一实体数,business-category relationship,3
+unique_entities_per_relation,每种关系连接的唯一实体数,"business-category relationship""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,business-event relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,buyer,2
+unique_entities_per_relation,每种关系连接的唯一实体数,cardio,5
+unique_entities_per_relation,每种关系连接的唯一实体数,career highlight,2
+unique_entities_per_relation,每种关系连接的唯一实体数,category,15
+unique_entities_per_relation,每种关系连接的唯一实体数,category inclusion,3
+unique_entities_per_relation,每种关系连接的唯一实体数,category membership,2
+unique_entities_per_relation,每种关系连接的唯一实体数,causality,4
+unique_entities_per_relation,每种关系连接的唯一实体数,cause and effect,2
+unique_entities_per_relation,每种关系连接的唯一实体数,celebration,8
+unique_entities_per_relation,每种关系连接的唯一实体数,central character,2
+unique_entities_per_relation,每种关系连接的唯一实体数,central star,2
+unique_entities_per_relation,每种关系连接的唯一实体数,challenge,3
+unique_entities_per_relation,每种关系连接的唯一实体数,challenges,2
+unique_entities_per_relation,每种关系连接的唯一实体数,chaos creation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character analysis,4
+unique_entities_per_relation,每种关系连接的唯一实体数,character appreciation,6
+unique_entities_per_relation,每种关系连接的唯一实体数,character connection,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character connections,3
+unique_entities_per_relation,每种关系连接的唯一实体数,character contrast,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character depth,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character development,7
+unique_entities_per_relation,每种关系连接的唯一实体数,character dynamics,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character integration,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,character relationships,2
+unique_entities_per_relation,每种关系连接的唯一实体数,check-in,2
+unique_entities_per_relation,每种关系连接的唯一实体数,choice,4
+unique_entities_per_relation,每种关系连接的唯一实体数,class change,2
+unique_entities_per_relation,每种关系连接的唯一实体数,client relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,coach-team relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,coaching,5
+unique_entities_per_relation,每种关系连接的唯一实体数,collaboration,60
+unique_entities_per_relation,每种关系连接的唯一实体数,collective action,2
+unique_entities_per_relation,每种关系连接的唯一实体数,collegial,2
+unique_entities_per_relation,每种关系连接的唯一实体数,common belief,3
+unique_entities_per_relation,每种关系连接的唯一实体数,common interest,13
+unique_entities_per_relation,每种关系连接的唯一实体数,common interests,2
+unique_entities_per_relation,每种关系连接的唯一实体数,communication,10
+unique_entities_per_relation,每种关系连接的唯一实体数,community,2
+unique_entities_per_relation,每种关系连接的唯一实体数,community building,2
+unique_entities_per_relation,每种关系连接的唯一实体数,community development,2
+unique_entities_per_relation,每种关系连接的唯一实体数,community engagement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,community focus,2
+unique_entities_per_relation,每种关系连接的唯一实体数,community impact,3
+unique_entities_per_relation,每种关系连接的唯一实体数,community involvement,6
+unique_entities_per_relation,每种关系连接的唯一实体数,community participation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,community spirit,2
+unique_entities_per_relation,每种关系连接的唯一实体数,competition,6
+unique_entities_per_relation,每种关系连接的唯一实体数,complementary pairing,2
+unique_entities_per_relation,每种关系连接的唯一实体数,complexity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,concept,2
+unique_entities_per_relation,每种关系连接的唯一实体数,concern,10
+unique_entities_per_relation,每种关系连接的唯一实体数,confidence,2
+unique_entities_per_relation,每种关系连接的唯一实体数,conflict resolution,2
+unique_entities_per_relation,每种关系连接的唯一实体数,connectivity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,consideration,8
+unique_entities_per_relation,每种关系连接的唯一实体数,console,2
+unique_entities_per_relation,每种关系连接的唯一实体数,content,2
+unique_entities_per_relation,每种关系连接的唯一实体数,content development,2
+unique_entities_per_relation,每种关系连接的唯一实体数,contract renewal,2
+unique_entities_per_relation,每种关系连接的唯一实体数,contrast,2
+unique_entities_per_relation,每种关系连接的唯一实体数,contribution,6
+unique_entities_per_relation,每种关系连接的唯一实体数,conversation,10
+unique_entities_per_relation,每种关系连接的唯一实体数,conversations,2
+unique_entities_per_relation,每种关系连接的唯一实体数,cooperation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,coordination,4
+unique_entities_per_relation,每种关系连接的唯一实体数,core activity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,correlation,7
+unique_entities_per_relation,每种关系连接的唯一实体数,culinary interest,2
+unique_entities_per_relation,每种关系连接的唯一实体数,cultural celebration,2
+unique_entities_per_relation,每种关系连接的唯一实体数,current gameplay,2
+unique_entities_per_relation,每种关系连接的唯一实体数,customer,7
+unique_entities_per_relation,每种关系连接的唯一实体数,customer service,2
+unique_entities_per_relation,每种关系连接的唯一实体数,customer-business relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,customer-owner relationship,3
+unique_entities_per_relation,每种关系连接的唯一实体数,customer-provider,2
+unique_entities_per_relation,每种关系连接的唯一实体数,data collection,2
+unique_entities_per_relation,每种关系连接的唯一实体数,data usage,2
+unique_entities_per_relation,每种关系连接的唯一实体数,date,4
+unique_entities_per_relation,每种关系连接的唯一实体数,day,2
+unique_entities_per_relation,每种关系连接的唯一实体数,day of event,3
+unique_entities_per_relation,每种关系连接的唯一实体数,decor,3
+unique_entities_per_relation,每种关系连接的唯一实体数,delivery,7
+unique_entities_per_relation,每种关系连接的唯一实体数,delivery plan,2
+unique_entities_per_relation,每种关系连接的唯一实体数,delivery service,4
+unique_entities_per_relation,每种关系连接的唯一实体数,delivery time,2
+unique_entities_per_relation,每种关系连接的唯一实体数,details,2
+unique_entities_per_relation,每种关系连接的唯一实体数,development,3
+unique_entities_per_relation,每种关系连接的唯一实体数,dining experience,3
+unique_entities_per_relation,每种关系连接的唯一实体数,dining plan,3
+unique_entities_per_relation,每种关系连接的唯一实体数,dinner,3
+unique_entities_per_relation,每种关系连接的唯一实体数,dinner plan,3
+unique_entities_per_relation,每种关系连接的唯一实体数,dinner plans,2
+unique_entities_per_relation,每种关系连接的唯一实体数,discount,2
+unique_entities_per_relation,每种关系连接的唯一实体数,discussion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,disruption,3
+unique_entities_per_relation,每种关系连接的唯一实体数,embracing change,2
+unique_entities_per_relation,每种关系连接的唯一实体数,emotion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,emotional closure,2
+unique_entities_per_relation,每种关系连接的唯一实体数,emotional connection,3
+unique_entities_per_relation,每种关系连接的唯一实体数,emotional depth,2
+unique_entities_per_relation,每种关系连接的唯一实体数,emotional impact,10
+unique_entities_per_relation,每种关系连接的唯一实体数,emotional stakes,2
+unique_entities_per_relation,每种关系连接的唯一实体数,emphasis,2
+unique_entities_per_relation,每种关系连接的唯一实体数,employment,6
+unique_entities_per_relation,每种关系连接的唯一实体数,encouragement,5
+unique_entities_per_relation,每种关系连接的唯一实体数,energy,2
+unique_entities_per_relation,每种关系连接的唯一实体数,engagement,7
+unique_entities_per_relation,每种关系连接的唯一实体数,enjoyment,10
+unique_entities_per_relation,每种关系连接的唯一实体数,entertainment,9
+unique_entities_per_relation,每种关系连接的唯一实体数,enthusiasm,46
+unique_entities_per_relation,每种关系连接的唯一实体数,event,7
+unique_entities_per_relation,每种关系连接的唯一实体数,event attendance,2
+unique_entities_per_relation,每种关系连接的唯一实体数,"event attendance""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,event interest,2
+unique_entities_per_relation,每种关系连接的唯一实体数,event organization,6
+unique_entities_per_relation,每种关系连接的唯一实体数,event participation,6
+unique_entities_per_relation,每种关系连接的唯一实体数,event planning,10
+unique_entities_per_relation,每种关系连接的唯一实体数,event preference,3
+unique_entities_per_relation,每种关系连接的唯一实体数,event promotion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,event reference,3
+unique_entities_per_relation,每种关系连接的唯一实体数,excitement,32
+unique_entities_per_relation,每种关系连接的唯一实体数,exercise,9
+unique_entities_per_relation,每种关系连接的唯一实体数,expectation,5
+unique_entities_per_relation,每种关系连接的唯一实体数,expert advice,2
+unique_entities_per_relation,每种关系连接的唯一实体数,expertise,6
+unique_entities_per_relation,每种关系连接的唯一实体数,exploration,7
+unique_entities_per_relation,每种关系连接的唯一实体数,eye care,3
+unique_entities_per_relation,每种关系连接的唯一实体数,family,2
+unique_entities_per_relation,每种关系连接的唯一实体数,family life,2
+unique_entities_per_relation,每种关系连接的唯一实体数,fandom,3
+unique_entities_per_relation,每种关系连接的唯一实体数,fans,4
+unique_entities_per_relation,每种关系连接的唯一实体数,fantasy,2
+unique_entities_per_relation,每种关系连接的唯一实体数,fascination,2
+unique_entities_per_relation,每种关系连接的唯一实体数,favorite band,2
+unique_entities_per_relation,每种关系连接的唯一实体数,favorite flavor,4
+unique_entities_per_relation,每种关系连接的唯一实体数,favorite games,2
+unique_entities_per_relation,每种关系连接的唯一实体数,favorite hero,4
+unique_entities_per_relation,每种关系连接的唯一实体数,favorite musician,4
+unique_entities_per_relation,每种关系连接的唯一实体数,favorite show,2
+unique_entities_per_relation,每种关系连接的唯一实体数,feature implementation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,feedback,8
+unique_entities_per_relation,每种关系连接的唯一实体数,financial,2
+unique_entities_per_relation,每种关系连接的唯一实体数,financial impact,2
+unique_entities_per_relation,每种关系连接的唯一实体数,financial matters,3
+unique_entities_per_relation,每种关系连接的唯一实体数,financial transaction,2
+unique_entities_per_relation,每种关系连接的唯一实体数,financial transactions,2
+unique_entities_per_relation,每种关系连接的唯一实体数,fitness,10
+unique_entities_per_relation,每种关系连接的唯一实体数,fitness goal,2
+unique_entities_per_relation,每种关系连接的唯一实体数,fitness goals,2
+unique_entities_per_relation,每种关系连接的唯一实体数,fitness interest,4
+unique_entities_per_relation,每种关系连接的唯一实体数,fitness plan,4
+unique_entities_per_relation,每种关系连接的唯一实体数,fitness suggestion,5
+unique_entities_per_relation,每种关系连接的唯一实体数,flavor experimentation,4
+unique_entities_per_relation,每种关系连接的唯一实体数,flavor preferences,6
+unique_entities_per_relation,每种关系连接的唯一实体数,flexibility,3
+unique_entities_per_relation,每种关系连接的唯一实体数,focus,2
+unique_entities_per_relation,每种关系连接的唯一实体数,food,5
+unique_entities_per_relation,每种关系连接的唯一实体数,food choice,2
+unique_entities_per_relation,每种关系连接的唯一实体数,food combination,5
+unique_entities_per_relation,每种关系连接的唯一实体数,food enjoyment,6
+unique_entities_per_relation,每种关系连接的唯一实体数,food interest,7
+unique_entities_per_relation,每种关系连接的唯一实体数,food knowledge,2
+unique_entities_per_relation,每种关系连接的唯一实体数,food preference,16
+unique_entities_per_relation,每种关系连接的唯一实体数,food sharing,3
+unique_entities_per_relation,每种关系连接的唯一实体数,friendship,15
+unique_entities_per_relation,每种关系连接的唯一实体数,frustration,2
+unique_entities_per_relation,每种关系连接的唯一实体数,functionality,3
+unique_entities_per_relation,每种关系连接的唯一实体数,future implications,3
+unique_entities_per_relation,每种关系连接的唯一实体数,game character,2
+unique_entities_per_relation,每种关系连接的唯一实体数,game comparison,2
+unique_entities_per_relation,每种关系连接的唯一实体数,game discussion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,game experience,2
+unique_entities_per_relation,每种关系连接的唯一实体数,game interest,3
+unique_entities_per_relation,每种关系连接的唯一实体数,game night planning,3
+unique_entities_per_relation,每种关系连接的唯一实体数,game recommendation,3
+unique_entities_per_relation,每种关系连接的唯一实体数,gameplay,5
+unique_entities_per_relation,每种关系连接的唯一实体数,gameplay challenge,2
+unique_entities_per_relation,每种关系连接的唯一实体数,gameplay mechanics,2
+unique_entities_per_relation,每种关系连接的唯一实体数,games,2
+unique_entities_per_relation,每种关系连接的唯一实体数,gaming,2
+unique_entities_per_relation,每种关系连接的唯一实体数,gaming experience,3
+unique_entities_per_relation,每种关系连接的唯一实体数,gaming interest,2
+unique_entities_per_relation,每种关系连接的唯一实体数,gaming preference,3
+unique_entities_per_relation,每种关系连接的唯一实体数,gardening,4
+unique_entities_per_relation,每种关系连接的唯一实体数,genre,4
+unique_entities_per_relation,每种关系连接的唯一实体数,genre association,2
+unique_entities_per_relation,每种关系连接的唯一实体数,gift exchange,4
+unique_entities_per_relation,每种关系连接的唯一实体数,gift offer,2
+unique_entities_per_relation,每种关系连接的唯一实体数,goal,5
+unique_entities_per_relation,每种关系连接的唯一实体数,goal alignment,2
+unique_entities_per_relation,每种关系连接的唯一实体数,goals,3
+unique_entities_per_relation,每种关系连接的唯一实体数,gratitude,5
+unique_entities_per_relation,每种关系连接的唯一实体数,group purchase,3
+unique_entities_per_relation,每种关系连接的唯一实体数,guest,3
+unique_entities_per_relation,每种关系连接的唯一实体数,guidance,2
+unique_entities_per_relation,每种关系连接的唯一实体数,gym recommendation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,hate,2
+unique_entities_per_relation,每种关系连接的唯一实体数,health,7
+unique_entities_per_relation,每种关系连接的唯一实体数,health concern,2
+unique_entities_per_relation,每种关系连接的唯一实体数,health maintenance,3
+unique_entities_per_relation,每种关系连接的唯一实体数,health promotion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,help,5
+unique_entities_per_relation,每种关系连接的唯一实体数,helpful relationship,3
+unique_entities_per_relation,每种关系连接的唯一实体数,high stakes,2
+unique_entities_per_relation,每种关系连接的唯一实体数,hilarious moments,2
+unique_entities_per_relation,每种关系连接的唯一实体数,hobby,2
+unique_entities_per_relation,每种关系连接的唯一实体数,holiday celebration,2
+unique_entities_per_relation,每种关系连接的唯一实体数,hope,4
+unique_entities_per_relation,每种关系连接的唯一实体数,host,7
+unique_entities_per_relation,每种关系连接的唯一实体数,hosting,6
+unique_entities_per_relation,每种关系连接的唯一实体数,humor,2
+unique_entities_per_relation,每种关系连接的唯一实体数,ideological conflict,2
+unique_entities_per_relation,每种关系连接的唯一实体数,impact,10
+unique_entities_per_relation,每种关系连接的唯一实体数,importance,4
+unique_entities_per_relation,每种关系连接的唯一实体数,impression,5
+unique_entities_per_relation,每种关系连接的唯一实体数,influence,7
+unique_entities_per_relation,每种关系连接的唯一实体数,information,2
+unique_entities_per_relation,每种关系连接的唯一实体数,initiates plan,2
+unique_entities_per_relation,每种关系连接的唯一实体数,initiation,3
+unique_entities_per_relation,每种关系连接的唯一实体数,innovation,4
+unique_entities_per_relation,每种关系连接的唯一实体数,inquiry,3
+unique_entities_per_relation,每种关系连接的唯一实体数,inspiration,6
+unique_entities_per_relation,每种关系连接的唯一实体数,installation,3
+unique_entities_per_relation,每种关系连接的唯一实体数,instruction,2
+unique_entities_per_relation,每种关系连接的唯一实体数,interaction,5
+unique_entities_per_relation,每种关系连接的唯一实体数,interest,45
+unique_entities_per_relation,每种关系连接的唯一实体数,interests,2
+unique_entities_per_relation,每种关系连接的唯一实体数,intimacy,2
+unique_entities_per_relation,每种关系连接的唯一实体数,introduction,2
+unique_entities_per_relation,每种关系连接的唯一实体数,invitation,17
+unique_entities_per_relation,每种关系连接的唯一实体数,involvement,30
+unique_entities_per_relation,每种关系连接的唯一实体数,jam sessions,2
+unique_entities_per_relation,每种关系连接的唯一实体数,joint activity,3
+unique_entities_per_relation,每种关系连接的唯一实体数,knowledge,2
+unique_entities_per_relation,每种关系连接的唯一实体数,landlord-tenant,2
+unique_entities_per_relation,每种关系连接的唯一实体数,landscape,2
+unique_entities_per_relation,每种关系连接的唯一实体数,launch,2
+unique_entities_per_relation,每种关系连接的唯一实体数,leadership,15
+unique_entities_per_relation,每种关系连接的唯一实体数,leadership approaches,2
+unique_entities_per_relation,每种关系连接的唯一实体数,learning,4
+unique_entities_per_relation,每种关系连接的唯一实体数,leisure activity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,local knowledge,2
+unique_entities_per_relation,每种关系连接的唯一实体数,location,30
+unique_entities_per_relation,每种关系连接的唯一实体数,loss,4
+unique_entities_per_relation,每种关系连接的唯一实体数,love,4
+unique_entities_per_relation,每种关系连接的唯一实体数,maintenance,4
+unique_entities_per_relation,每种关系连接的唯一实体数,management,2
+unique_entities_per_relation,每种关系连接的唯一实体数,marketing,2
+unique_entities_per_relation,每种关系连接的唯一实体数,match,3
+unique_entities_per_relation,每种关系连接的唯一实体数,meal plan,3
+unique_entities_per_relation,每种关系连接的唯一实体数,measuring,2
+unique_entities_per_relation,每种关系连接的唯一实体数,medical advancement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,medical breakthrough,3
+unique_entities_per_relation,每种关系连接的唯一实体数,medical care,2
+unique_entities_per_relation,每种关系连接的唯一实体数,meeting,4
+unique_entities_per_relation,每种关系连接的唯一实体数,meeting date,2
+unique_entities_per_relation,每种关系连接的唯一实体数,meeting location,5
+unique_entities_per_relation,每种关系连接的唯一实体数,"meeting location""",2
+unique_entities_per_relation,每种关系连接的唯一实体数,meeting plan,4
+unique_entities_per_relation,每种关系连接的唯一实体数,member,5
+unique_entities_per_relation,每种关系连接的唯一实体数,membership,8
+unique_entities_per_relation,每种关系连接的唯一实体数,mental state,2
+unique_entities_per_relation,每种关系连接的唯一实体数,mention,3
+unique_entities_per_relation,每种关系连接的唯一实体数,mentorship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,method,3
+unique_entities_per_relation,每种关系连接的唯一实体数,mood,2
+unique_entities_per_relation,每种关系连接的唯一实体数,motivation,5
+unique_entities_per_relation,每种关系连接的唯一实体数,music,12
+unique_entities_per_relation,每种关系连接的唯一实体数,music fusion,3
+unique_entities_per_relation,每种关系连接的唯一实体数,music preference,6
+unique_entities_per_relation,每种关系连接的唯一实体数,music preferences,6
+unique_entities_per_relation,每种关系连接的唯一实体数,music shopping,2
+unique_entities_per_relation,每种关系连接的唯一实体数,musical activity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,musical instrument,2
+unique_entities_per_relation,每种关系连接的唯一实体数,musical practice,2
+unique_entities_per_relation,每种关系连接的唯一实体数,mutual appreciation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,narrative strength,2
+unique_entities_per_relation,每种关系连接的唯一实体数,necessity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,neighborly relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,no mention,4
+unique_entities_per_relation,每种关系连接的唯一实体数,no relationship,3
+unique_entities_per_relation,每种关系连接的唯一实体数,offers,3
+unique_entities_per_relation,每种关系连接的唯一实体数,ongoing activity,2
+unique_entities_per_relation,每种关系连接的唯一实体数,openness,2
+unique_entities_per_relation,每种关系连接的唯一实体数,opponents,2
+unique_entities_per_relation,每种关系连接的唯一实体数,option,3
+unique_entities_per_relation,每种关系连接的唯一实体数,ordering,2
+unique_entities_per_relation,每种关系连接的唯一实体数,organization,23
+unique_entities_per_relation,每种关系连接的唯一实体数,organizer,5
+unique_entities_per_relation,每种关系连接的唯一实体数,organizing,3
+unique_entities_per_relation,每种关系连接的唯一实体数,ownership,7
+unique_entities_per_relation,每种关系连接的唯一实体数,part of,2
+unique_entities_per_relation,每种关系连接的唯一实体数,part of Europe,2
+unique_entities_per_relation,每种关系连接的唯一实体数,participant,5
+unique_entities_per_relation,每种关系连接的唯一实体数,participation,50
+unique_entities_per_relation,每种关系连接的唯一实体数,pastry delivery,2
+unique_entities_per_relation,每种关系连接的唯一实体数,performance,8
+unique_entities_per_relation,每种关系连接的唯一实体数,performing,2
+unique_entities_per_relation,每种关系连接的唯一实体数,person,12
+unique_entities_per_relation,每种关系连接的唯一实体数,personal,3
+unique_entities_per_relation,每种关系连接的唯一实体数,personal interest,2
+unique_entities_per_relation,每种关系连接的唯一实体数,personal relationship,3
+unique_entities_per_relation,每种关系连接的唯一实体数,personal taste,2
+unique_entities_per_relation,每种关系连接的唯一实体数,personalized treatment,3
+unique_entities_per_relation,每种关系连接的唯一实体数,philosophy,1
+unique_entities_per_relation,每种关系连接的唯一实体数,photography,3
+unique_entities_per_relation,每种关系连接的唯一实体数,physical activity,3
+unique_entities_per_relation,每种关系连接的唯一实体数,physical condition,3
+unique_entities_per_relation,每种关系连接的唯一实体数,physical experience,2
+unique_entities_per_relation,每种关系连接的唯一实体数,planning,12
+unique_entities_per_relation,每种关系连接的唯一实体数,platform,4
+unique_entities_per_relation,每种关系连接的唯一实体数,play equipment,3
+unique_entities_per_relation,每种关系连接的唯一实体数,player development,3
+unique_entities_per_relation,每种关系连接的唯一实体数,player-team relationship,10
+unique_entities_per_relation,每种关系连接的唯一实体数,potential,2
+unique_entities_per_relation,每种关系连接的唯一实体数,potential twists,2
+unique_entities_per_relation,每种关系连接的唯一实体数,power,2
+unique_entities_per_relation,每种关系连接的唯一实体数,power dynamics,6
+unique_entities_per_relation,每种关系连接的唯一实体数,power struggle,2
+unique_entities_per_relation,每种关系连接的唯一实体数,powerful narrative,2
+unique_entities_per_relation,每种关系连接的唯一实体数,practice,4
+unique_entities_per_relation,每种关系连接的唯一实体数,practice on instrument,2
+unique_entities_per_relation,每种关系连接的唯一实体数,practice space,5
+unique_entities_per_relation,每种关系连接的唯一实体数,preference,8
+unique_entities_per_relation,每种关系连接的唯一实体数,preparation,7
+unique_entities_per_relation,每种关系连接的唯一实体数,preparedness,2
+unique_entities_per_relation,每种关系连接的唯一实体数,process,2
+unique_entities_per_relation,每种关系连接的唯一实体数,product,2
+unique_entities_per_relation,每种关系连接的唯一实体数,product development,2
+unique_entities_per_relation,每种关系连接的唯一实体数,product feature,2
+unique_entities_per_relation,每种关系连接的唯一实体数,product feedback,3
+unique_entities_per_relation,每种关系连接的唯一实体数,product innovation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,product interest,5
+unique_entities_per_relation,每种关系连接的唯一实体数,product launch,2
+unique_entities_per_relation,每种关系连接的唯一实体数,product offering,6
+unique_entities_per_relation,每种关系连接的唯一实体数,product preference,3
+unique_entities_per_relation,每种关系连接的唯一实体数,product promotion,3
+unique_entities_per_relation,每种关系连接的唯一实体数,production,4
+unique_entities_per_relation,每种关系连接的唯一实体数,professional,3
+unique_entities_per_relation,每种关系连接的唯一实体数,professional activities,2
+unique_entities_per_relation,每种关系连接的唯一实体数,professional advice,3
+unique_entities_per_relation,每种关系连接的唯一实体数,professional association,2
+unique_entities_per_relation,每种关系连接的唯一实体数,professional communication,2
+unique_entities_per_relation,每种关系连接的唯一实体数,professional guidance,2
+unique_entities_per_relation,每种关系连接的唯一实体数,professional interest,3
+unique_entities_per_relation,每种关系连接的唯一实体数,professional relationship,5
+unique_entities_per_relation,每种关系连接的唯一实体数,professional reminder,2
+unique_entities_per_relation,每种关系连接的唯一实体数,project development,2
+unique_entities_per_relation,每种关系连接的唯一实体数,project involvement,4
+unique_entities_per_relation,每种关系连接的唯一实体数,project promotion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,promotion,5
+unique_entities_per_relation,每种关系连接的唯一实体数,proposal,2
+unique_entities_per_relation,每种关系连接的唯一实体数,protein,4
+unique_entities_per_relation,每种关系连接的唯一实体数,provision,2
+unique_entities_per_relation,每种关系连接的唯一实体数,purchase,6
+unique_entities_per_relation,每种关系连接的唯一实体数,quirky encounters,2
+unique_entities_per_relation,每种关系连接的唯一实体数,recipe recommendation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,recommendation,43
+unique_entities_per_relation,每种关系连接的唯一实体数,recovery,2
+unique_entities_per_relation,每种关系连接的唯一实体数,redemption,2
+unique_entities_per_relation,每种关系连接的唯一实体数,reference,5
+unique_entities_per_relation,每种关系连接的唯一实体数,reference point,3
+unique_entities_per_relation,每种关系连接的唯一实体数,regular activity,3
+unique_entities_per_relation,每种关系连接的唯一实体数,regular visitor,2
+unique_entities_per_relation,每种关系连接的唯一实体数,related topics,7
+unique_entities_per_relation,每种关系连接的唯一实体数,relaxation,5
+unique_entities_per_relation,每种关系连接的唯一实体数,remedy,2
+unique_entities_per_relation,每种关系连接的唯一实体数,reminder,9
+unique_entities_per_relation,每种关系连接的唯一实体数,repair,2
+unique_entities_per_relation,每种关系连接的唯一实体数,request,5
+unique_entities_per_relation,每种关系连接的唯一实体数,research,2
+unique_entities_per_relation,每种关系连接的唯一实体数,responsibility,6
+unique_entities_per_relation,每种关系连接的唯一实体数,restaurant recommendation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,reverence,2
+unique_entities_per_relation,每种关系连接的唯一实体数,rule,2
+unique_entities_per_relation,每种关系连接的唯一实体数,safety,6
+unique_entities_per_relation,每种关系连接的唯一实体数,satellite,2
+unique_entities_per_relation,每种关系连接的唯一实体数,scheduling,6
+unique_entities_per_relation,每种关系连接的唯一实体数,search,3
+unique_entities_per_relation,每种关系连接的唯一实体数,service,8
+unique_entities_per_relation,每种关系连接的唯一实体数,service improvement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,service offering,3
+unique_entities_per_relation,每种关系连接的唯一实体数,settlement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,shared experience,2
+unique_entities_per_relation,每种关系连接的唯一实体数,shared goals,2
+unique_entities_per_relation,每种关系连接的唯一实体数,shared interest,20
+unique_entities_per_relation,每种关系连接的唯一实体数,"shared interest(""entity",2
+unique_entities_per_relation,每种关系连接的唯一实体数,shared interests,2
+unique_entities_per_relation,每种关系连接的唯一实体数,shared musical interest,5
+unique_entities_per_relation,每种关系连接的唯一实体数,shared plan,3
+unique_entities_per_relation,每种关系连接的唯一实体数,sharing,2
+unique_entities_per_relation,每种关系连接的唯一实体数,sharing tips,2
+unique_entities_per_relation,每种关系连接的唯一实体数,shopping,4
+unique_entities_per_relation,每种关系连接的唯一实体数,showdowns,2
+unique_entities_per_relation,每种关系连接的唯一实体数,silent elimination,2
+unique_entities_per_relation,每种关系连接的唯一实体数,skills improvement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,soccer,3
+unique_entities_per_relation,每种关系连接的唯一实体数,soccer match,2
+unique_entities_per_relation,每种关系连接的唯一实体数,soccer player,3
+unique_entities_per_relation,每种关系连接的唯一实体数,social connection,2
+unique_entities_per_relation,每种关系连接的唯一实体数,social event,3
+unique_entities_per_relation,每种关系连接的唯一实体数,social interaction,3
+unique_entities_per_relation,每种关系连接的唯一实体数,solution,4
+unique_entities_per_relation,每种关系连接的唯一实体数,song choice,6
+unique_entities_per_relation,每种关系连接的唯一实体数,song inspiration,3
+unique_entities_per_relation,每种关系连接的唯一实体数,song reference,2
+unique_entities_per_relation,每种关系连接的唯一实体数,song selection,5
+unique_entities_per_relation,每种关系连接的唯一实体数,source,2
+unique_entities_per_relation,每种关系连接的唯一实体数,sport,2
+unique_entities_per_relation,每种关系连接的唯一实体数,sports,2
+unique_entities_per_relation,每种关系连接的唯一实体数,stealth enhancement,2
+unique_entities_per_relation,每种关系连接的唯一实体数,stretch,4
+unique_entities_per_relation,每种关系连接的唯一实体数,style,2
+unique_entities_per_relation,每种关系连接的唯一实体数,suggestion,21
+unique_entities_per_relation,每种关系连接的唯一实体数,suggests food,2
+unique_entities_per_relation,每种关系连接的唯一实体数,suggests location,2
+unique_entities_per_relation,每种关系连接的唯一实体数,supplementation,2
+unique_entities_per_relation,每种关系连接的唯一实体数,supply,2
+unique_entities_per_relation,每种关系连接的唯一实体数,support,41
+unique_entities_per_relation,每种关系连接的唯一实体数,supportive friendship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,supportive relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,sympathy,2
+unique_entities_per_relation,每种关系连接的唯一实体数,target audience,2
+unique_entities_per_relation,每种关系连接的唯一实体数,target market,2
+unique_entities_per_relation,每种关系连接的唯一实体数,team performance,3
+unique_entities_per_relation,每种关系连接的唯一实体数,team spirit,3
+unique_entities_per_relation,每种关系连接的唯一实体数,team-competition relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,technology application,2
+unique_entities_per_relation,每种关系连接的唯一实体数,technology use,2
+unique_entities_per_relation,每种关系连接的唯一实体数,temporal,2
+unique_entities_per_relation,每种关系连接的唯一实体数,temporal association,5
+unique_entities_per_relation,每种关系连接的唯一实体数,testing,2
+unique_entities_per_relation,每种关系连接的唯一实体数,themes,4
+unique_entities_per_relation,每种关系连接的唯一实体数,therapy,6
+unique_entities_per_relation,每种关系连接的唯一实体数,time,5
+unique_entities_per_relation,每种关系连接的唯一实体数,time arrangement,5
+unique_entities_per_relation,每种关系连接的唯一实体数,time association,2
+unique_entities_per_relation,每种关系连接的唯一实体数,time coordination,2
+unique_entities_per_relation,每种关系连接的唯一实体数,tool,5
+unique_entities_per_relation,每种关系连接的唯一实体数,top picks,3
+unique_entities_per_relation,每种关系连接的唯一实体数,topic,7
+unique_entities_per_relation,每种关系连接的唯一实体数,toxic alliances,2
+unique_entities_per_relation,每种关系连接的唯一实体数,tradition,3
+unique_entities_per_relation,每种关系连接的唯一实体数,tragic transition,2
+unique_entities_per_relation,每种关系连接的唯一实体数,travel experience,2
+unique_entities_per_relation,每种关系连接的唯一实体数,travel experiences,2
+unique_entities_per_relation,每种关系连接的唯一实体数,travel recommendations,2
+unique_entities_per_relation,每种关系连接的唯一实体数,treat,3
+unique_entities_per_relation,每种关系连接的唯一实体数,treatment,2
+unique_entities_per_relation,每种关系连接的唯一实体数,understanding,5
+unique_entities_per_relation,每种关系连接的唯一实体数,unique storytelling,2
+unique_entities_per_relation,每种关系连接的唯一实体数,user,2
+unique_entities_per_relation,每种关系连接的唯一实体数,user feedback,3
+unique_entities_per_relation,每种关系连接的唯一实体数,utilization,2
+unique_entities_per_relation,每种关系连接的唯一实体数,value,3
+unique_entities_per_relation,每种关系连接的唯一实体数,variety,2
+unique_entities_per_relation,每种关系连接的唯一实体数,video games,3
+unique_entities_per_relation,每种关系连接的唯一实体数,visuals,3
+unique_entities_per_relation,每种关系连接的唯一实体数,win,2
+unique_entities_per_relation,每种关系连接的唯一实体数,work challenges,2
+unique_entities_per_relation,每种关系连接的唯一实体数,work environment,4
+unique_entities_per_relation,每种关系连接的唯一实体数,work on project,2
+unique_entities_per_relation,每种关系连接的唯一实体数,work on song,2
+unique_entities_per_relation,每种关系连接的唯一实体数,work relationship,2
+unique_entities_per_relation,每种关系连接的唯一实体数,work-hobby balance,3
+unique_entities_per_relation,每种关系连接的唯一实体数,work-related stress,4
+unique_entities_per_relation,每种关系连接的唯一实体数,workout discussion,2
+unique_entities_per_relation,每种关系连接的唯一实体数,workout feedback,4
+unique_entities_per_relation_json,每种关系连接的唯一实体数(JSON),,"{""\""Exercise"": 2, ""\""activity planning"": 2, ""\""agreement"": 2, ""\""artistic interest"": 2, ""\""associated activity"": 2, ""\""attendance"": 4, ""\""band"": 2, ""\""captivating moments"": 2, ""\""collaboration"": 15, ""\""community"": 2, ""\""delivery"": 2, ""\""documentation"": 2, ""\""employment"": 3, ""\""entertainment"": 2, ""\""enthusiasm"": 10, ""\""event attendance"": 4, ""\""event planning"": 2, ""\""excitement"": 12, ""\""expectation"": 2, ""\""expertise"": 2, ""\""exploration"": 2, ""\""favorite show"": 4, ""\""financial obligations"": 2, ""\""food enjoyment"": 2, ""\""food preference"": 2, ""\""freelancer"": 2, ""\""friendship"": 2, ""\""gaming interest"": 2, ""\""genre mixing"": 2, ""\""group purchase"": 3, ""\""health"": 2, ""\""holiday celebration"": 2, ""\""hosting"": 2, ""\""information sharing"": 2, ""\""interest"": 9, ""\""introduction"": 2, ""\""invitation"": 3, ""\""involvement"": 4, ""\""joint activity"": 3, ""\""leadership approaches"": 2, ""\""meal planning"": 3, ""\""meeting location"": 2, ""\""meeting plan"": 2, ""\""member"": 2, ""\""music"": 5, ""\""mutual appreciation"": 2, ""\""organization"": 4, ""\""ownership"": 7, ""\""participation"": 16, ""\""past interest"": 2, ""\""personal conversation"": 2, ""\""planner"": 2, ""\""preference"": 3, ""\""preparation"": 2, ""\""product"": 3, ""\""professional interest"": 2, ""\""promotion"": 2, ""\""reference"": 3, ""\""related topics"": 5, ""\""reminder"": 6, ""\""request"": 5, ""\""responsibility"": 2, ""\""scheduling"": 3, ""\""service offer"": 2, ""\""shared goal"": 2, ""\""shared interest"": 3, ""\""shopping"": 2, ""\""social"": 2, ""\""social interaction"": 5, ""\""social plan"": 2, ""\""solution"": 2, ""\""song choice"": 4, ""\""song selection"": 2, ""\""source"": 2, ""\""sports"": 3, ""\""stress relief"": 2, ""\""suggestion"": 8, ""\""support"": 6, ""\""teaching"": 2, ""\""transaction"": 3, ""\""travel"": 2, ""\""treatment"": 2, ""\""user"": 2, ""\""work on song"": 2, ""\""workout discussion"": 3, ""\""workout location"": 3, ""\""workout plan"": 2, ""\""workout preferences"": 3, ""\""workout preparation"": 2, ""\""workout session"": 2, ""\""workout technique"": 2, ""\""workplace"": 2, ""2014 World Cup is a significant event in Messi's career"": 2, ""20261127_17:00"": 2, ""AI Robots\"""": 2, ""AdamSmith"": 2, ""AdamSmith is a person who is discussing air conditioner options with Li Hua."": 2, ""AdamSmith is a person who is involved in the playground equipment installation project and contributes ideas for the project."": 2, ""AdamSmith\"""": 4, ""Alex"": 4, ""Alex\"""": 5, ""Amalfi Coast"": 2, ""Big Bang Theory\"""": 2, ""Breach\"""": 2, ""Bronwyn\"""": 2, ""ChaeSong-hwa is a person who is part of a group planning a music jam session."": 2, ""Community"": 2, ""Community Garden"": 2, ""Death Stranding"": 2, ""EmilyBurnett"": 2, ""Garden Renovation\"""": 2, ""Gym"": 2, ""Helios"": 2, ""Hike\"""": 2, ""JakeWatson"": 2, ""Jasper recommends the 2005 final between Liverpool and AC Milan as a classic match."": 2, ""Jennifer\"""": 2, ""JenniferMoore"": 4, ""JenniferMoore is a fitness coach who reminds her clients to check in with her about their fitness progress and offers personalized advice."": 2, ""JenniferMoore is a person who recommends ladder drills and shares tips for keeping workouts fresh and fun."": 2, ""JenniferMoore\"""": 4, ""John"": 2, ""John Denver\"""": 2, ""LiHua"": 2, ""LiHua is a participant in a discussion about games with stunning visuals."": 2, ""LiHua\"""": 3, ""Overwatch 3\"""": 2, ""Project"": 2, ""Quillan\"""": 2, ""Rush is a band known for Neil Peart's drumming."": 2, ""Saffron\"""": 2, ""Sage\"""": 2, ""Sam Rivera is a member of a team working on communicating with an unknown intelligence"": 3, ""Smith\"""": 2, ""Sunday"": 2, ""Sunday is the day when LiHua and WolfgangSchulz plan to have their music jam."": 2, ""TV show discussion"": 3, ""TV show discussion\"""": 3, ""TV show discussions"": 2, ""TV show interest"": 7, ""TV show interest\"""": 3, ""TV show recommendation"": 3, ""ThaneChambers"": 2, ""The timestamp indicates the time when the conversation between HaileyJohnson and LiHua took place."": 2, ""Viper"": 2, ""Viva la Vida\"""": 2, ""Westeros"": 2, ""WolfgangSchulz\"""": 6, ""World Cup"": 2, ""absence"": 3, ""acceptance"": 2, ""achievement"": 4, ""acquisition"": 2, ""act of appreciation"": 2, ""act of kindness"": 2, ""activity"": 28, ""activity context"": 2, ""activity focus"": 6, ""activity location"": 5, ""activity planning"": 2, ""adherence"": 2, ""admiration"": 4, ""advice"": 9, ""aesthetics"": 2, ""ag(\""entity"": 2, ""agreement"": 53, ""agrees to location"": 2, ""agrees to plan"": 2, ""alignment"": 6, ""alliances"": 2, ""alternative"": 3, ""ambition"": 2, ""anticipation"": 10, ""appreciation"": 6, ""architecture"": 2, ""arrangement"": 3, ""artistic appreciation"": 2, ""artistic interest"": 4, ""artistry"": 4, ""assignment"": 2, ""assistance"": 9, ""association"": 11, ""atmosphere"": 5, ""atmosphere enhancement"": 2, ""attendance"": 12, ""attending event"": 2, ""availability"": 4, ""awareness"": 9, ""band"": 4, ""band member"": 4, ""band membership"": 5, ""band music"": 2, ""band organization"": 3, ""bandmates"": 2, ""beach scenery"": 2, ""beauty"": 2, ""behavior"": 2, ""beneficiary"": 3, ""benefit"": 2, ""benefits"": 3, ""betrayal"": 2, ""brainstorming"": 4, ""break"": 3, ""business"": 2, ""business owner"": 2, ""business-category relationship"": 3, ""business-category relationship\"""": 2, ""business-event relationship"": 2, ""buyer"": 2, ""cardio"": 5, ""career highlight"": 2, ""category"": 15, ""category inclusion"": 3, ""category membership"": 2, ""causality"": 4, ""cause and effect"": 2, ""celebration"": 8, ""central character"": 2, ""central star"": 2, ""challenge"": 3, ""challenges"": 2, ""chaos creation"": 2, ""character analysis"": 4, ""character appreciation"": 6, ""character connection"": 2, ""character connections"": 3, ""character contrast"": 2, ""character depth"": 2, ""character development"": 7, ""character dynamics"": 2, ""character integration"": 2, ""character relationship"": 2, ""character relationships"": 2, ""check-in"": 2, ""choice"": 4, ""class change"": 2, ""client relationship"": 2, ""coach-team relationship"": 2, ""coaching"": 5, ""collaboration"": 60, ""collective action"": 2, ""collegial"": 2, ""common belief"": 3, ""common interest"": 13, ""common interests"": 2, ""communication"": 10, ""community"": 2, ""community building"": 2, ""community development"": 2, ""community engagement"": 2, ""community focus"": 2, ""community impact"": 3, ""community involvement"": 6, ""community participation"": 2, ""community spirit"": 2, ""competition"": 6, ""complementary pairing"": 2, ""complexity"": 2, ""concept"": 2, ""concern"": 10, ""confidence"": 2, ""conflict resolution"": 2, ""connectivity"": 2, ""consideration"": 8, ""console"": 2, ""content"": 2, ""content development"": 2, ""contract renewal"": 2, ""contrast"": 2, ""contribution"": 6, ""conversation"": 10, ""conversations"": 2, ""cooperation"": 2, ""coordination"": 4, ""core activity"": 2, ""correlation"": 7, ""culinary interest"": 2, ""cultural celebration"": 2, ""current gameplay"": 2, ""customer"": 7, ""customer service"": 2, ""customer-business relationship"": 2, ""customer-owner relationship"": 3, ""customer-provider"": 2, ""data collection"": 2, ""data usage"": 2, ""date"": 4, ""day"": 2, ""day of event"": 3, ""decor"": 3, ""delivery"": 7, ""delivery plan"": 2, ""delivery service"": 4, ""delivery time"": 2, ""details"": 2, ""development"": 3, ""dining experience"": 3, ""dining plan"": 3, ""dinner"": 3, ""dinner plan"": 3, ""dinner plans"": 2, ""discount"": 2, ""discussion"": 2, ""disruption"": 3, ""embracing change"": 2, ""emotion"": 2, ""emotional closure"": 2, ""emotional connection"": 3, ""emotional depth"": 2, ""emotional impact"": 10, ""emotional stakes"": 2, ""emphasis"": 2, ""employment"": 6, ""encouragement"": 5, ""energy"": 2, ""engagement"": 7, ""enjoyment"": 10, ""entertainment"": 9, ""enthusiasm"": 46, ""event"": 7, ""event attendance"": 2, ""event attendance\"""": 2, ""event interest"": 2, ""event organization"": 6, ""event participation"": 6, ""event planning"": 10, ""event preference"": 3, ""event promotion"": 2, ""event reference"": 3, ""excitement"": 32, ""exercise"": 9, ""expectation"": 5, ""expert advice"": 2, ""expertise"": 6, ""exploration"": 7, ""eye care"": 3, ""family"": 2, ""family life"": 2, ""fandom"": 3, ""fans"": 4, ""fantasy"": 2, ""fascination"": 2, ""favorite band"": 2, ""favorite flavor"": 4, ""favorite games"": 2, ""favorite hero"": 4, ""favorite musician"": 4, ""favorite show"": 2, ""feature implementation"": 2, ""feedback"": 8, ""financial"": 2, ""financial impact"": 2, ""financial matters"": 3, ""financial transaction"": 2, ""financial transactions"": 2, ""fitness"": 10, ""fitness goal"": 2, ""fitness goals"": 2, ""fitness interest"": 4, ""fitness plan"": 4, ""fitness suggestion"": 5, ""flavor experimentation"": 4, ""flavor preferences"": 6, ""flexibility"": 3, ""focus"": 2, ""food"": 5, ""food choice"": 2, ""food combination"": 5, ""food enjoyment"": 6, ""food interest"": 7, ""food knowledge"": 2, ""food preference"": 16, ""food sharing"": 3, ""friendship"": 15, ""frustration"": 2, ""functionality"": 3, ""future implications"": 3, ""game character"": 2, ""game comparison"": 2, ""game discussion"": 2, ""game experience"": 2, ""game interest"": 3, ""game night planning"": 3, ""game recommendation"": 3, ""gameplay"": 5, ""gameplay challenge"": 2, ""gameplay mechanics"": 2, ""games"": 2, ""gaming"": 2, ""gaming experience"": 3, ""gaming interest"": 2, ""gaming preference"": 3, ""gardening"": 4, ""genre"": 4, ""genre association"": 2, ""gift exchange"": 4, ""gift offer"": 2, ""goal"": 5, ""goal alignment"": 2, ""goals"": 3, ""gratitude"": 5, ""group purchase"": 3, ""guest"": 3, ""guidance"": 2, ""gym recommendation"": 2, ""hate"": 2, ""health"": 7, ""health concern"": 2, ""health maintenance"": 3, ""health promotion"": 2, ""help"": 5, ""helpful relationship"": 3, ""high stakes"": 2, ""hilarious moments"": 2, ""hobby"": 2, ""holiday celebration"": 2, ""hope"": 4, ""host"": 7, ""hosting"": 6, ""humor"": 2, ""ideological conflict"": 2, ""impact"": 10, ""importance"": 4, ""impression"": 5, ""influence"": 7, ""information"": 2, ""initiates plan"": 2, ""initiation"": 3, ""innovation"": 4, ""inquiry"": 3, ""inspiration"": 6, ""installation"": 3, ""instruction"": 2, ""interaction"": 5, ""interest"": 45, ""interests"": 2, ""intimacy"": 2, ""introduction"": 2, ""invitation"": 17, ""involvement"": 30, ""jam sessions"": 2, ""joint activity"": 3, ""knowledge"": 2, ""landlord-tenant"": 2, ""landscape"": 2, ""launch"": 2, ""leadership"": 15, ""leadership approaches"": 2, ""learning"": 4, ""leisure activity"": 2, ""local knowledge"": 2, ""location"": 30, ""loss"": 4, ""love"": 4, ""maintenance"": 4, ""management"": 2, ""marketing"": 2, ""match"": 3, ""meal plan"": 3, ""measuring"": 2, ""medical advancement"": 2, ""medical breakthrough"": 3, ""medical care"": 2, ""meeting"": 4, ""meeting date"": 2, ""meeting location"": 5, ""meeting location\"""": 2, ""meeting plan"": 4, ""member"": 5, ""membership"": 8, ""mental state"": 2, ""mention"": 3, ""mentorship"": 2, ""method"": 3, ""mood"": 2, ""motivation"": 5, ""music"": 12, ""music fusion"": 3, ""music preference"": 6, ""music preferences"": 6, ""music shopping"": 2, ""musical activity"": 2, ""musical instrument"": 2, ""musical practice"": 2, ""mutual appreciation"": 2, ""narrative strength"": 2, ""necessity"": 2, ""neighborly relationship"": 2, ""no mention"": 4, ""no relationship"": 3, ""offers"": 3, ""ongoing activity"": 2, ""openness"": 2, ""opponents"": 2, ""option"": 3, ""ordering"": 2, ""organization"": 23, ""organizer"": 5, ""organizing"": 3, ""ownership"": 7, ""part of"": 2, ""part of Europe"": 2, ""participant"": 5, ""participation"": 50, ""pastry delivery"": 2, ""performance"": 8, ""performing"": 2, ""person"": 12, ""personal"": 3, ""personal interest"": 2, ""personal relationship"": 3, ""personal taste"": 2, ""personalized treatment"": 3, ""philosophy"": 1, ""photography"": 3, ""physical activity"": 3, ""physical condition"": 3, ""physical experience"": 2, ""planning"": 12, ""platform"": 4, ""play equipment"": 3, ""player development"": 3, ""player-team relationship"": 10, ""potential"": 2, ""potential twists"": 2, ""power"": 2, ""power dynamics"": 6, ""power struggle"": 2, ""powerful narrative"": 2, ""practice"": 4, ""practice on instrument"": 2, ""practice space"": 5, ""preference"": 8, ""preparation"": 7, ""preparedness"": 2, ""process"": 2, ""product"": 2, ""product development"": 2, ""product feature"": 2, ""product feedback"": 3, ""product innovation"": 2, ""product interest"": 5, ""product launch"": 2, ""product offering"": 6, ""product preference"": 3, ""product promotion"": 3, ""production"": 4, ""professional"": 3, ""professional activities"": 2, ""professional advice"": 3, ""professional association"": 2, ""professional communication"": 2, ""professional guidance"": 2, ""professional interest"": 3, ""professional relationship"": 5, ""professional reminder"": 2, ""project development"": 2, ""project involvement"": 4, ""project promotion"": 2, ""promotion"": 5, ""proposal"": 2, ""protein"": 4, ""provision"": 2, ""purchase"": 6, ""quirky encounters"": 2, ""recipe recommendation"": 2, ""recommendation"": 43, ""recovery"": 2, ""redemption"": 2, ""reference"": 5, ""reference point"": 3, ""regular activity"": 3, ""regular visitor"": 2, ""related topics"": 7, ""relaxation"": 5, ""remedy"": 2, ""reminder"": 9, ""repair"": 2, ""request"": 5, ""research"": 2, ""responsibility"": 6, ""restaurant recommendation"": 2, ""reverence"": 2, ""rule"": 2, ""safety"": 6, ""satellite"": 2, ""scheduling"": 6, ""search"": 3, ""service"": 8, ""service improvement"": 2, ""service offering"": 3, ""settlement"": 2, ""shared experience"": 2, ""shared goals"": 2, ""shared interest"": 20, ""shared interest(\""entity"": 2, ""shared interests"": 2, ""shared musical interest"": 5, ""shared plan"": 3, ""sharing"": 2, ""sharing tips"": 2, ""shopping"": 4, ""showdowns"": 2, ""silent elimination"": 2, ""skills improvement"": 2, ""soccer"": 3, ""soccer match"": 2, ""soccer player"": 3, ""social connection"": 2, ""social event"": 3, ""social interaction"": 3, ""solution"": 4, ""song choice"": 6, ""song inspiration"": 3, ""song reference"": 2, ""song selection"": 5, ""source"": 2, ""sport"": 2, ""sports"": 2, ""stealth enhancement"": 2, ""stretch"": 4, ""style"": 2, ""suggestion"": 21, ""suggests food"": 2, ""suggests location"": 2, ""supplementation"": 2, ""supply"": 2, ""support"": 41, ""supportive friendship"": 2, ""supportive relationship"": 2, ""sympathy"": 2, ""target audience"": 2, ""target market"": 2, ""team performance"": 3, ""team spirit"": 3, ""team-competition relationship"": 2, ""technology application"": 2, ""technology use"": 2, ""temporal"": 2, ""temporal association"": 5, ""testing"": 2, ""themes"": 4, ""therapy"": 6, ""time"": 5, ""time arrangement"": 5, ""time association"": 2, ""time coordination"": 2, ""tool"": 5, ""top picks"": 3, ""topic"": 7, ""toxic alliances"": 2, ""tradition"": 3, ""tragic transition"": 2, ""travel experience"": 2, ""travel experiences"": 2, ""travel recommendations"": 2, ""treat"": 3, ""treatment"": 2, ""understanding"": 5, ""unique storytelling"": 2, ""user"": 2, ""user feedback"": 3, ""utilization"": 2, ""value"": 3, ""variety"": 2, ""video games"": 3, ""visuals"": 3, ""win"": 2, ""work challenges"": 2, ""work environment"": 4, ""work on project"": 2, ""work on song"": 2, ""work relationship"": 2, ""work-hobby balance"": 3, ""work-related stress"": 4, ""workout discussion"": 2, ""workout feedback"": 4}"

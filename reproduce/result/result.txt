@@ -1,0 +1,3 @@
+
+mini模式dpsk回答，平均输入1,913.92tokens,平均输出44.69
+minirag的index构建，平均输入2,861.86tokens，平均输出310.19tokens

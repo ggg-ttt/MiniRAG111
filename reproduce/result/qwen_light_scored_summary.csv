@@ -1,0 +1,7 @@
+﻿answer_col,total,correct,accuracy,wrong,wrong_rate,irrelevant,irrelevant_rate
+QWENnaiveRAG,637,341,0.5353,269,0.4223,27,0.0424
+QWENlightRAG,637,425,0.6672,201,0.3155,11,0.0173
+QWENminiRAG,637,419,0.6578,209,0.3281,9,0.0141
+DPSKnaiveRAG,637,464,0.7284,147,0.2308,26,0.0408
+DPSKlightRAG,637,295,0.4631,239,0.3752,103,0.1617
+
