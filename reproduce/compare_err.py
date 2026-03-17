@@ -7,11 +7,11 @@ from openai import OpenAI
 # 配置区
 # ─────────────────────────────────────────────
 API_BASE_URL = "https://api.siliconflow.cn/v1"
-API_KEY      = "sk-daquqwlxgxwpsbnsefqqcgzajxnimxtknrehfrtpohomrudw"
+API_KEY      = "sk-yybogoppdlgyrfbxlyzdipqqpwbrqklvlxykpsaplboinvxg"
 EVAL_MODEL   = "deepseek-ai/DeepSeek-V3.2"
 
-INPUT_CSV    = "tests/Qwen3-4B-Instruct-2507_vllm_debug/qwen_mini_output.csv"
-OUTPUT_CSV   = "tests/Qwen3-4B-Instruct-2507_vllm_debug/qwen_mini_scored.csv"
+INPUT_CSV    = "/data/gty/workspace/MiniRAG111/tests/dpsk_mini/dpsk_mini_output.csv"
+OUTPUT_CSV   = "/data/gty/workspace/MiniRAG111/tests/dpsk_mini/dpsk_mini_score.csv"
 
 # 评估的答案列名（可扩展为多列，如 ["lightRAG", "miniRAG"]）
 ANSWER_COLS  = ["miniRAG"]
