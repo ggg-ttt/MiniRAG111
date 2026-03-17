@@ -4,7 +4,7 @@ import statistics
 import xml.etree.ElementTree as ET
 from collections import Counter, defaultdict, deque
 from pathlib import Path
-
+#用于图结构分析
 
 GRAPHML_NS = {"g": "http://graphml.graphdrawing.org/xmlns"}
 SEP_TOKEN = "<SEP>"

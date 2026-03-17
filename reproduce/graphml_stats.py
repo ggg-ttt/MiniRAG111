@@ -20,6 +20,7 @@ METRIC_LABELS = {
     "largest_connected_component_size": "最大连通分量大小",
     "unique_entities_per_relation": "每种关系连接的唯一实体数",
     "unique_entities_per_relation_json": "每种关系连接的唯一实体数(JSON)",
+    "avg_unique_entities_per_relation": "每种关系连接的唯一实体数平均值",
     "relation_diversity": "关系多样性",
     "duplicate_entity_rate": "重复实体率",
     "duplicate_relation_description_rate": "重复关系表述率",
@@ -106,6 +107,10 @@ def collect_stats(graph: nx.Graph) -> list[dict[str, object]]:
     duplicate_entity_rate = duplicate_rate(graph.nodes(), normalize_entity_name)
     duplicate_relation_description_rate = duplicate_rate(edge_descriptions, normalize_text)
 
+    # 计算每种关系连接的唯一实体数的平均值
+    unique_entity_counts = [len(entities) for entities in relation_to_entities.values()]
+    avg_unique_entities_per_relation = sum(unique_entity_counts) / len(unique_entity_counts) if unique_entity_counts else 0.0
+
     rows: list[dict[str, object]] = [
         {"metric": "entity_count", "metric_zh": METRIC_LABELS["entity_count"], "value": entity_count},
         {"metric": "relation_count", "metric_zh": METRIC_LABELS["relation_count"], "value": relation_count},
@@ -117,6 +122,11 @@ def collect_stats(graph: nx.Graph) -> list[dict[str, object]]:
             "metric": "duplicate_relation_description_rate",
             "metric_zh": METRIC_LABELS["duplicate_relation_description_rate"],
             "value": round(duplicate_relation_description_rate, 6),
+        },
+        {
+            "metric": "avg_unique_entities_per_relation",
+            "metric_zh": METRIC_LABELS["avg_unique_entities_per_relation"],
+            "value": round(avg_unique_entities_per_relation, 6),
         },
     ]
 
