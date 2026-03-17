@@ -1,0 +1,686 @@
+{
+  "28": {
+    "question": "Who does Li Hua go to watch the movie \"Overwatch 3\" with?",
+    "answer": "Wolfgang",
+    "evidence": "20260122_17:00<and>20260121_13:00",
+    "type": "Multi"
+  },
+  "32": {
+    "question": "Who introduced the bread delivery service and recommend Alice for the delivery?",
+    "answer": "HaileyJohnson",
+    "evidence": "20260318_15:00<and>20260329_13:00",
+    "type": "Multi"
+  },
+  "41": {
+    "question": "Who does LiHua want to invite to the photo exhibition and who goes with him (during August)?",
+    "answer": "Wolfgang",
+    "evidence": "20260801_19:00<and>20260805_16:00",
+    "type": "Multi"
+  },
+  "72": {
+    "question": "What is the name of the gym that Wolfgang recommended LiHua to go to?",
+    "answer": "FitZone",
+    "evidence": "20260111_08:00",
+    "type": "Single"
+  },
+  "75": {
+    "question": "Who does Li Hua go to watch the movie \"Overwatch 3\" with?",
+    "answer": "Wolfgang",
+    "evidence": "20260122_17:00<and>20260121_13:00",
+    "type": "Multi"
+  },
+  "78": {
+    "question": "Who does Li Hua plan to celebrate Chinese Lunar New Year with?",
+    "answer": "Wolfgang",
+    "evidence": "20260113_11:00",
+    "type": "Single"
+  },
+  "82": {
+    "question": "Who suggested Li Hua keep a clear log of all the changes requested by the client?",
+    "answer": "Wolfgang Schulz",
+    "evidence": "20260131_14:00",
+    "type": "Single"
+  },
+  "85": {
+    "question": "What is the name of the café Wolfgang Schulz recommends to Li Hua?",
+    "answer": "The Java Spot",
+    "evidence": "20260131_14:00",
+    "type": "Single"
+  },
+  "101": {
+    "question": "What is the name of the café where Li Hua and YurikoYamamoto first meeting to talk about Yuriko's website?",
+    "answer": "Central Perk",
+    "evidence": "20260225_15:00",
+    "type": "Single"
+  },
+  "108": {
+    "question": "Who is Li Hua meeting with to discuss homepage design updates?",
+    "answer": "Yuriko Yamamoto",
+    "evidence": "20260303_09:30",
+    "type": "Single"
+  },
+  "112": {
+    "question": "Who invites Li Hua to join the community bake sale?",
+    "answer": "Adam Smith",
+    "evidence": "20260312_12:30",
+    "type": "Single"
+  },
+  "129": {
+    "question": "Who is delivering the bread to Li Hua on 20260403?",
+    "answer": "Alice",
+    "evidence": "20260403_08:00",
+    "type": "Single"
+  },
+  "133": {
+    "question": "What new song does the Jolly band decide to work on for the jam session according to their discussion on 20260410?",
+    "answer": "Stand By Me",
+    "evidence": "20260410_11:00",
+    "type": "Single"
+  },
+  "138": {
+    "question": "Who proposes that the band takes a break from jamming this week?",
+    "answer": "Wolfgang Schulz",
+    "evidence": "20260416_21:00",
+    "type": "Single"
+  },
+  "143": {
+    "question": "Who is Li Hua bringing to the band's jam session according to their discussion on 20260425?",
+    "answer": "ChaeSong-hwa",
+    "evidence": "20260425_21:00",
+    "type": "Single"
+  },
+  "148": {
+    "question": "What is the name of the Italian restaurant where Wolfgang and Li Hua are having dinner to celebrate Wolfgang's promotion?",
+    "answer": "Venedia Grancaffe",
+    "evidence": "20260430_17:00",
+    "type": "Single"
+  },
+  "162": {
+    "question": "What does LiHua find as a perfect place to work in his conversation with Chae?",
+    "answer": "The Lighthouse Cafe",
+    "evidence": "20260521_15:00",
+    "type": "Single"
+  },
+  "168": {
+    "question": "What is the name of the song LiHua suggests revisiting for the band's music session according to their conversation on 20260529?",
+    "answer": "The History of Everything",
+    "evidence": "20260529_17:00",
+    "type": "Single"
+  },
+  "171": {
+    "question": "What is the name of Hailey Johnson's new weekly flavor cheese?",
+    "answer": "Hazelnut Basque Roasted Cheese",
+    "evidence": "20260603_09:45",
+    "type": "Single"
+  },
+  "178": {
+    "question": "Who proposes adding some outdoor games or a small water feature to the children's play areain the community discussion?",
+    "answer": "Thrall",
+    "evidence": "20260612_15:00",
+    "type": "Single"
+  },
+  "179": {
+    "question": "Who proposes adding picnic tables for families to enjoy some snacks after playing?",
+    "answer": "Li Hua",
+    "evidence": "20260612_15:00",
+    "type": "Single"
+  },
+  "180": {
+    "question": "Who proposes creating a little garden area where kids can help plant flowers or vegetables?",
+    "answer": "GromHellscream",
+    "evidence": "20260612_15:00",
+    "type": "Single"
+  },
+  "194": {
+    "question": "What song does Yuriko propose that the band can practice this weekend according to the band's discussion on 20260703?",
+    "answer": "Take Me Home Country Roads by John Denver",
+    "evidence": "20260703_11:45",
+    "type": "Single"
+  },
+  "195": {
+    "question": "What is the name of the song that Yuriko recommend to the band on 20260706?",
+    "answer": "Rolling in the Deep by Adele",
+    "evidence": "20260706_19:30",
+    "type": "Single"
+  },
+  "206": {
+    "question": "What is Wolfgang's favorite superhero?",
+    "answer": "Iron Man",
+    "evidence": "20260726_16:00",
+    "type": "Single"
+  },
+  "207": {
+    "question": "What is LiHua's favorite superhero?",
+    "answer": "Spider-Man",
+    "evidence": "20260726_16:00",
+    "type": "Single"
+  },
+  "212": {
+    "question": "Who is recommended by Jennifer to share some fitness tips in the gym group chat on 20260730?",
+    "answer": "LiHua",
+    "evidence": "20260730_17:30",
+    "type": "Single"
+  },
+  "225": {
+    "question": "Who offers to help with setting up for the garage sale?",
+    "answer": "AdamSmith",
+    "evidence": "20260814_15:00",
+    "type": "Single"
+  },
+  "231": {
+    "question": "Who does Li Hua mention as their favorite character from The Witcher 3?",
+    "answer": "Geralt",
+    "evidence": "20260818_10:00",
+    "type": "Single"
+  },
+  "234": {
+    "question": "Which scene stood out for Li Hua in The Witcher 3?",
+    "answer": "The \"Battle of Kaer Morhen\"",
+    "evidence": "20260818_10:00",
+    "type": "Single"
+  },
+  "241": {
+    "question": "Which upcoming PS5 exclusive game does Gavriel express curiosity about?",
+    "answer": "Ghostwire: Tokyo",
+    "evidence": "20260819_18:00",
+    "type": "Single"
+  },
+  "244": {
+    "question": "Who shared a music theory tutorial with the group?",
+    "answer": "Chae Song-hwa",
+    "evidence": "20260825_10:45",
+    "type": "Single"
+  },
+  "246": {
+    "question": "What is Kendall's relationship with Logan like according to the group's discussion?",
+    "answer": "Toxic",
+    "evidence": "20260826_18:00",
+    "type": "Single"
+  },
+  "255": {
+    "question": "Who is the most hateable character in Game of Thrones in Orion's opinion?",
+    "answer": "Ramsay Bolton",
+    "evidence": "20260902_16:00",
+    "type": "Single"
+  },
+  "256": {
+    "question": "Who is the most hateable character in Game of Thrones in Merrick's opinion?",
+    "answer": "Cersei Lannister",
+    "evidence": "20260902_16:00",
+    "type": "Single"
+  },
+  "257": {
+    "question": "What is the common interest between Li Hua and Jake Watson?",
+    "answer": "Soccer",
+    "evidence": "20260903_17:00",
+    "type": "Single"
+  },
+  "258": {
+    "question": "What kind of songs are Li Hua and Chae Song-hwa considering adding to their playlist for babies?",
+    "answer": "Lullabies",
+    "evidence": "20260904_10:00",
+    "type": "Single"
+  },
+  "274": {
+    "question": "Who is the best midfielder in the past decade in JakeWatson's opinion?",
+    "answer": "Luka Modrić",
+    "evidence": "20260912_16:00",
+    "type": "Single"
+  },
+  "283": {
+    "question": "Who does EmilyBurnett think is a standout character in the Game of Thrones series?",
+    "answer": "Tyrion Lannister",
+    "evidence": "20260915_12:00",
+    "type": "Single"
+  },
+  "306": {
+    "question": "Who does JakeWatson consider the best defender in the history of FC Barcelona?",
+    "answer": "Carles Puyol",
+    "evidence": "20260917_10:00",
+    "type": "Single"
+  },
+  "316": {
+    "question": "Who suggests hitting Starbucks after work on 20260918?",
+    "answer": "WolfgangSchulz",
+    "evidence": "20260918_18:00",
+    "type": "Single"
+  },
+  "320": {
+    "question": "Which game does LiHua mention he's been playing on 20260920?",
+    "answer": "Call of Duty: Warzone",
+    "evidence": "20260920_16:00",
+    "type": "Single"
+  },
+  "328": {
+    "question": "Who initiated the discussion about the community garden renovation and its benefits to local businesses?",
+    "answer": "Turalyon",
+    "evidence": "20260921_10:00",
+    "type": "Single"
+  },
+  "335": {
+    "question": "Who does LiHua ask for help with installing a curtain?",
+    "answer": "AdamSmith",
+    "evidence": "20260921_16:00",
+    "type": "Single"
+  },
+  "338": {
+    "question": "Who will bring the tools for the curtain installation?",
+    "answer": "AdamSmith",
+    "evidence": "20260921_16:00",
+    "type": "Single"
+  },
+  "339": {
+    "question": "Who suggests exploring the PS5 settings for accessibility features and Game Help?",
+    "answer": "ThaneChambers",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "340": {
+    "question": "What feature on the PS5 does Ileana praise for making switching between games smoother?",
+    "answer": "Control Center",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "343": {
+    "question": "Which game is LiHua currently obsessed with for its graphics and storytelling?",
+    "answer": "God of War",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "344": {
+    "question": "What game is Helios currently playing and finds the world and gameplay mechanics stunning?",
+    "answer": "Horizon Forbidden West",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "347": {
+    "question": "Which game does Helios suggest for tactical fun with a great story and character development?",
+    "answer": "Fire Emblem",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "350": {
+    "question": "Which game does Dyllan recommend for turn-based combat and art style?",
+    "answer": "Octopath Traveler",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "351": {
+    "question": "Who is ThaneChambers' favorite character in \"Octopath Traveler\"?",
+    "answer": "Primrose",
+    "evidence": "20260922_12:00",
+    "type": "Single"
+  },
+  "358": {
+    "question": "Who asks Emily if she has read The Lord of the Rings novels?",
+    "answer": "LiHua",
+    "evidence": "20260922_17:00",
+    "type": "Single"
+  },
+  "359": {
+    "question": "What TV series does LiHua mention that they are curious about in relation to The Lord of the Rings?",
+    "answer": "The Rings of Power",
+    "evidence": "20260922_17:00",
+    "type": "Single"
+  },
+  "361": {
+    "question": "Which character does LiHua mention as their favorite and describe as inspiring?",
+    "answer": "Galadriel",
+    "evidence": "20260922_17:00",
+    "type": "Single"
+  },
+  "368": {
+    "question": "Who initiates the suggestion to go to the grocery store after work on 20260923?",
+    "answer": "WolfgangSchulz",
+    "evidence": "20260923_16:00",
+    "type": "Single"
+  },
+  "378": {
+    "question": "Who asks LiHua to measure the window in the basement?",
+    "answer": "AdamSmith",
+    "evidence": "20260928_10:00",
+    "type": "Single"
+  },
+  "381": {
+    "question": "Who initiates the discussion about binaural tones?",
+    "answer": "ChaeSong-hwa",
+    "evidence": "20260929_11:00",
+    "type": "Single"
+  },
+  "384": {
+    "question": "Who congratulates LiHua on pushing their limits with the bench press?",
+    "answer": "JenniferMoore",
+    "evidence": "20260930_14:00",
+    "type": "Single"
+  },
+  "388": {
+    "question": "Who suggests going out for hot pot?",
+    "answer": "LiHua",
+    "evidence": "Time: 20260930_16:00",
+    "type": "Single"
+  },
+  "389": {
+    "question": "What type of hot pot does WolfgangSchulz prefer?",
+    "answer": "Sichuan",
+    "evidence": "Time: 20260930_16:00",
+    "type": "Single"
+  },
+  "391": {
+    "question": "Who comes up with the idea of picking up drinks on the way to hot pot?",
+    "answer": "LiHua",
+    "evidence": "Time: 20260930_16:00",
+    "type": "Single"
+  },
+  "393": {
+    "question": "Who reminds everyone to drink water before and during the match?",
+    "answer": "JakeWatson",
+    "evidence": "20261001_18:00",
+    "type": "Single"
+  },
+  "399": {
+    "question": "What does Giselle remind everyone to do before practice?",
+    "answer": "Stretch",
+    "evidence": "20261001_18:00",
+    "type": "Single"
+  },
+  "400": {
+    "question": "Who is considering buying Sekiro: Shadows Die Twice and asks for ThaneChambers' opinion?",
+    "answer": "LiHua",
+    "evidence": "20261001_20:00",
+    "type": "Single"
+  },
+  "404": {
+    "question": "What game is ThaneChambers currently playing?",
+    "answer": "Black Myth: Wukong",
+    "evidence": "20261001_20:00",
+    "type": "Single"
+  },
+  "409": {
+    "question": "Who informs LiHua that the new software is almost done?",
+    "answer": "WolfgangSchulz",
+    "evidence": "20261002_13:00",
+    "type": "Single"
+  },
+  "411": {
+    "question": "Who asks Jake to play as the goalkeeper for soccer training?",
+    "answer": "LiHua",
+    "evidence": "20261003_12:00",
+    "type": "Single"
+  },
+  "413": {
+    "question": "Who discusses classic matches between Barca and Bayern with Jake?",
+    "answer": "LiHua",
+    "evidence": "20261005_10:05",
+    "type": "Single"
+  },
+  "416": {
+    "question": "Who does Jake believe has the potential to be a game-changer for Barca?",
+    "answer": "Pedri",
+    "evidence": "20261005_10:05",
+    "type": "Single"
+  },
+  "420": {
+    "question": "Who does LiHua pick as the best football manager of all time?",
+    "answer": "Pep Guardiola",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "422": {
+    "question": "Which team's style of play does Farrah remember as \"Total football\"?",
+    "answer": "Barcelona",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "423": {
+    "question": "What playing style is associated with Guardiola's Barcelona team?",
+    "answer": "Tiki-taka",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "424": {
+    "question": "Which player's development under Guardiola does Jasper mention?",
+    "answer": "Phil Foden",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "425": {
+    "question": "What player's midfield importance does Aurora highlight?",
+    "answer": "Rodri",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "426": {
+    "question": "Who will bring cones for drills at the match?",
+    "answer": "Farrah",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "428": {
+    "question": "What will LiHua bring for everyone to enjoy after the match?",
+    "answer": "Snacks",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "429": {
+    "question": "Which match does Jasper mention that Manchester City played recently?",
+    "answer": "Against Chelsea in the Premier League",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "430": {
+    "question": "Who scored a stunner in the Manchester City vs. Chelsea match as mentioned in the conversation?",
+    "answer": "Phil Foden",
+    "evidence": "20261006_10:00",
+    "type": "Single"
+  },
+  "433": {
+    "question": "Who checks in with LiHua about their arm muscles after the bench press session?",
+    "answer": "JenniferMoore",
+    "evidence": "20261008_14:00",
+    "type": "Single"
+  },
+  "435": {
+    "question": "What snack does LiHua agree to bring for the movie?",
+    "answer": "Chips",
+    "evidence": "20261009_17:00",
+    "type": "Single"
+  },
+  "437": {
+    "question": "Who will pick up the snacks and drinks on their way before the movie?",
+    "answer": "LiHua",
+    "evidence": "20261009_17:00",
+    "type": "Single"
+  },
+  "438": {
+    "question": "Who initiated the discussion about Cersei's journey in Game of Thrones?",
+    "answer": "EmilyBurnett",
+    "evidence": "20261010_10:10",
+    "type": "Single"
+  },
+  "441": {
+    "question": "Which character's dynamic with Cersei is mentioned as complicated?",
+    "answer": "Jaime",
+    "evidence": "20261010_10:10",
+    "type": "Single"
+  },
+  "456": {
+    "question": "Who initiates the discussion about game storytelling?",
+    "answer": "ThaneChambers",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "457": {
+    "question": "What game does ThaneChambers consider their top choice for storytelling?",
+    "answer": "The Last of Us",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "458": {
+    "question": "Which game's narrative does Bronwyn appreciate for its father-son dynamic?",
+    "answer": "God of War",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "459": {
+    "question": "What game does Gavriel mention for its characters and plot twists?",
+    "answer": "Final Fantasy VII Remake",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "461": {
+    "question": "What game does Elara mention for making her emotional?",
+    "answer": "Bioshock Infinite",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "463": {
+    "question": "What game does Dyllan describe as epic for its samurai culture?",
+    "answer": "Ghost of Tsushima",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "469": {
+    "question": "Which game does Ileana mention for its unique world and storytelling?",
+    "answer": "Horizon Zero Dawn",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "470": {
+    "question": "What game does LiHua mention for exploring themes of choice & consciousness & humanity?",
+    "answer": "Detroit: Become Human",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "471": {
+    "question": "Which game does Dyllan say raised interesting questions and moral dilemmas?",
+    "answer": "Detroit: Become Human",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "472": {
+    "question": "What game does Dyllan recall for its intimate feel and dialogue?",
+    "answer": "Firewatch",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "473": {
+    "question": "Which game does LiHua mention for playing with various storytelling tropes?",
+    "answer": "The Stanley Parable",
+    "evidence": "20261011_11:00",
+    "type": "Single"
+  },
+  "476": {
+    "question": "Who offers to help with the installation of the curtains?",
+    "answer": "AdamSmith",
+    "evidence": "20261012_10:00",
+    "type": "Single"
+  },
+  "480": {
+    "question": "Who proposes the idea of adding tables near the benches?",
+    "answer": "RexxarRemar",
+    "evidence": "20261013_13:30",
+    "type": "Single"
+  },
+  "483": {
+    "question": "Who is excited to see how the garden evolves?",
+    "answer": "Thrall",
+    "evidence": "20261013_13:30",
+    "type": "Single"
+  },
+  "487": {
+    "question": "Who offers to check with friends for live music performance?",
+    "answer": "ArthasMenethil",
+    "evidence": "20261013_13:30",
+    "type": "Single"
+  },
+  "489": {
+    "question": "Who suggests doing a group purchase of the new games?",
+    "answer": "ThaneChambers",
+    "evidence": "20261014_14:00",
+    "type": "Single"
+  },
+  "503": {
+    "question": "What team does JakeWatson admire for their comebacks?",
+    "answer": "Real Madrid",
+    "evidence": "20261014_20:00",
+    "type": "Single"
+  },
+  "510": {
+    "question": "Who is Real Madrid's coach according to Ivor?",
+    "answer": "Ancelotti",
+    "evidence": "20261014_20:00",
+    "type": "Single"
+  },
+  "514": {
+    "question": "Who offers to bring cones for the soccer practice?",
+    "answer": "Aurora",
+    "evidence": "20261014_20:00",
+    "type": "Single"
+  },
+  "516": {
+    "question": "Who suggests getting pizza for dinner?",
+    "answer": "WolfgangSchulz",
+    "evidence": "20261015_15:00",
+    "type": "Single"
+  },
+  "520": {
+    "question": "Who invites LiHua to taste a new bread recipe?",
+    "answer": "HaileyJohnson",
+    "evidence": "20261016_16:00",
+    "type": "Single"
+  },
+  "536": {
+    "question": "What game does ThaneChambers remember as LiHua's favorite?",
+    "answer": "Black Myth: Wukong",
+    "evidence": "20261020_10:00",
+    "type": "Single"
+  },
+  "539": {
+    "question": "Who is LiHua's favorite character in the game \"Black Myth: Wukong\"?",
+    "answer": "Wukong",
+    "evidence": "20261020_10:00",
+    "type": "Single"
+  },
+  "543": {
+    "question": "Does LiHua play the game solo or with friends?",
+    "answer": "Both",
+    "evidence": "20261020_10:00",
+    "type": "Single"
+  },
+  "545": {
+    "question": "What TV series does EmilyBurnett remember LiHua likes?",
+    "answer": "Chernobyl",
+    "evidence": "20261021_21:00",
+    "type": "Single"
+  },
+  "547": {
+    "question": "What is EmilyBurnett's favorite TV show?",
+    "answer": "Game of Thrones",
+    "evidence": "20261021_21:00",
+    "type": "Single"
+  },
+  "550": {
+    "question": "What TV series is EmilyBurnett currently watching?",
+    "answer": "The Last of Us",
+    "evidence": "20261021_21:00",
+    "type": "Single"
+  },
+  "551": {
+    "question": "What TV show does EmilyBurnett recommend LiHua to watch?",
+    "answer": "The Last of Us",
+    "evidence": "20261021_21:00",
+    "type": "Single"
+  },
+  "569": {
+    "question": "What is on WolfgangSchulz's list for a future trip?",
+    "answer": "Italy",
+    "evidence": "20261025_16:00",
+    "type": "Single"
+  },
+  "570": {
+    "question": "What does WolfgangSchulz want to check out in Italy?",
+    "answer": "Cinque Terre",
+    "evidence": "20261025_16:00",
+    "type": "Single"
+  }
+}
