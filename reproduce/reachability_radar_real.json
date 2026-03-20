@@ -1,0 +1,77 @@
+{
+  "categories": [
+    "k=1",
+    "k=2",
+    "k=3",
+    "k=5",
+    "AEC"
+  ],
+  "style": {
+    "r_max": 1.0,
+    "r_ticks": [0.2, 0.4, 0.6, 0.8, 1.0],
+    "legend_loc": "lower right",
+    "legend_bbox": [1.12, 0.14],
+    "legend_font_size": 10,
+    "legend_frame_alpha": 0.94,
+    "legend_edge_color": "#d8d8d8",
+    "figure_size": [6.8, 6.1],
+    "font_size": 12,
+    "label_size": 13,
+    "tick_label_size": 10,
+    "tick_format": "percent",
+    "fill_alpha": 0.08,
+    "line_width": 1.6,
+    "grid_color": "#b7b7b7",
+    "grid_alpha": 0.75,
+    "spine_color": "#222222",
+    "spine_width": 0.8,
+    "background_color": "white"
+  },
+  "series": [
+    {
+      "name": "MiniRAG",
+      "color": "#d94b45",
+      "linestyle": "-",
+      "fill": true,
+      "fill_alpha": 0.08,
+      "linewidth": 1.6,
+      "values": [
+        0.7102803738317757,
+        0.7476635514018691,
+        0.7476635514018691,
+        0.7383177570093458,
+        0.939
+      ]
+    },
+    {
+      "name": "LightRAG",
+      "color": "#6aa4f8",
+      "linestyle": "-",
+      "fill": true,
+      "fill_alpha": 0.08,
+      "linewidth": 1.6,
+      "values": [
+        0.4392523364485981,
+        0.6728971962616822,
+        0.7289719626168224,
+        0.7850467289719626,
+        0.939
+      ]
+    },
+    {
+      "name": "HybridRAG",
+      "color": "#57c76f",
+      "linestyle": "-",
+      "fill": true,
+      "fill_alpha": 0.12,
+      "linewidth": 1.8,
+      "values": [
+        0.9158878504672897,
+        0.9719626168224299,
+        0.9906542056074766,
+        0.9719626168224299,
+        0.962
+      ]
+    }
+  ]
+}

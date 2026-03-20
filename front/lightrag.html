@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -72,7 +72,7 @@
                     <i class="fas fa-project-diagram mr-2"></i>图谱可视化
                 </button>
                 <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="documents">
-                    <i class="fas fa-file-alt mr-2"></i>文档管理
+                    <i class="fas fa-file-alt mr-2"></i>数据导入
                 </button>
                 <button class="tab-btn py-4 px-4 border-b-2 border-transparent hover:border-gray-300 text-sm font-medium transition-colors" data-tab="monitor">
                     <i class="fas fa-chart-line mr-2"></i>系统监控
@@ -89,7 +89,8 @@
         <div class="grid grid-cols-12 gap-6">
 
             <!-- 左侧边栏（在问答标签页显示） -->
-            <aside id="sidebar" class="col-span-12 md:col-span-3 space-y-6">
+            <aside id="sidebar" class="hidden">
+                <div class="grid grid-cols-1 gap-6">
                 <!-- 模型配置 -->
                 <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
                     <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="toggleModelConfig()">
@@ -102,7 +103,7 @@
                     </div>
                     <div id="model-config-panel" class="space-y-4">
                         <div>
-                            <label class="block text-xs text-gray-500 mb-1">LLM 模型</label>
+                            <label class="block text-xs text-gray-500 mb-1">SLM模型</label>
                             <select id="llm-model" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                 <option>qwen3:4b-instruct (本地)</option>
                                 <option>phi-4-mini-instruct (本地)</option>
@@ -126,227 +127,122 @@
                             <label class="block text-xs text-gray-500 mb-1">检索模式</label>
                             <select id="retrieval-mode" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
                                 <option value="hybrid">hybrid (混合检索)</option>
-                                <option value="local">local (本地细节)</option>
-                                <option value="naive">naive (普通 RAG)</option>
+                                <option value="local">local (路径级别检索)</option>
+                                <option value="naive">naive (向量检索)</option>
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- 数据管理 -->
-                <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
-                    <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="toggleDataManagement()">
-                        <h3 class="font-bold flex items-center text-sm">
-                            <i class="fas fa-upload mr-2 text-indigo-600"></i> 数据管理
-                        </h3>
-                        <button class="text-indigo-600 hover:text-indigo-800 text-xs">
-                            <i class="fas fa-chevron-down" id="data-management-toggle"></i>
-                        </button>
-                    </div>
-                    <div id="data-management-panel">
-                        <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()">
-                            <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
-                            <p class="text-xs text-gray-500">点击或拖拽上传文件</p>
-                            <p class="text-[10px] text-gray-400 mt-1">支持 .txt, .pdf, .md, .docx</p>
-                        </div>
-                        <input type="file" id="file-input" class="hidden" multiple accept=".txt,.pdf,.md,.docx">
-
-                    <!-- 分块配置 -->
-                    <div class="mt-4 pt-4 border-t border-gray-200">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-semibold text-sm text-gray-700">
-                                <i class="fas fa-cut mr-2 text-indigo-500"></i>文档分块配置
-                            </h4>
-                            <button onclick="toggleChunkConfig()" class="text-indigo-600 hover:text-indigo-800 text-xs">
-                                <i class="fas fa-chevron-down" id="chunk-config-toggle"></i>
-                            </button>
-                        </div>
-
-                        <div id="chunk-config-panel" class="space-y-3">
-                            <!-- 快速预设 -->
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-2">快速预设</label>
-                                <div class="grid grid-cols-4 gap-2">
-                                    <button onclick="setChunkPreset(512, 50)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">
-                                        精细
-                                    </button>
-                                    <button onclick="setChunkPreset(1200, 100)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors bg-indigo-50 border-indigo-300">
-                                        平衡
-                                    </button>
-                                    <button onclick="setChunkPreset(2048, 200)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">
-                                        粗粒度
-                                    </button>
-                                    <button onclick="setChunkPreset(4096, 400)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">
-                                        长文档
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- 自定义配置 -->
-                            <div class="grid grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1">
-                                        块大小 (tokens)
-                                        <i class="fas fa-info-circle ml-1 text-gray-400" title="每个文本块的最大token数"></i>
-                                    </label>
-                                    <input type="number" id="chunk-size" value="1200" min="256" max="8192" step="64"
-                                        class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                        onchange="updateChunkDisplay()">
-                                    <p class="text-[10px] text-gray-400 mt-1">建议: 512-4096</p>
-                                </div>
-                                <div>
-                                    <label class="block text-xs text-gray-500 mb-1">
-                                        重叠窗口 (tokens)
-                                        <i class="fas fa-info-circle ml-1 text-gray-400" title="相邻块之间的重叠token数，确保上下文连续性"></i>
-                                    </label>
-                                    <input type="number" id="chunk-overlap" value="100" min="0" max="1024" step="10"
-                                        class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                                        onchange="updateChunkDisplay()">
-                                    <p class="text-[10px] text-gray-400 mt-1">建议: 10-20% 块大小</p>
-                                </div>
-                            </div>
-
-                            <!-- 配置预览 -->
-                            <div class="bg-gray-50 rounded-lg p-3">
-                                <div class="flex items-center justify-between text-xs">
-                                    <span class="text-gray-600">预估分块数 (1MB文档):</span>
-                                    <span class="font-semibold text-indigo-600" id="estimated-chunks">~850 块</span>
-                                </div>
-                                <div class="flex items-center justify-between text-xs mt-1">
-                                    <span class="text-gray-600">重叠率:</span>
-                                    <span class="font-semibold text-gray-700" id="overlap-ratio">8.3%</span>
-                                </div>
-                                <p class="text-[10px] text-gray-400 mt-2">
-                                    <i class="fas fa-lightbulb mr-1"></i>
-                                    <span id="chunk-tip">平衡设置，适合大多数文档类型</span>
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- 知识图谱导入 -->
-                    <div class="mt-4 pt-4 border-t border-gray-200">
-                        <div class="flex items-center justify-between mb-3">
-                            <h4 class="font-semibold text-sm text-gray-700">
-                                <i class="fas fa-project-diagram mr-2 text-purple-500"></i>导入知识图谱
-                            </h4>
-                            <button onclick="toggleGraphImport()" class="text-indigo-600 hover:text-indigo-800 text-xs">
-                                <i class="fas fa-chevron-right" id="graph-import-toggle"></i>
-                            </button>
-                        </div>
-
-                        <div id="graph-import-panel" class="space-y-3" style="display: none;">
-                            <!-- 格式选择 -->
-                            <div>
-                                <label class="block text-xs text-gray-500 mb-2">图谱格式</label>
-                                <div class="grid grid-cols-3 gap-2">
-                                    <button onclick="selectGraphFormat('json')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left">
-                                        <i class="fas fa-code mb-1 block"></i>
-                                        JSON
-                                        <span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">通用格式</span>
-                                    </button>
-                                    <button onclick="selectGraphFormat('graphml')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left">
-                                        <i class="fas fa-sitemap mb-1 block"></i>
-                                        GraphML
-                                        <span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">Gephi/NetworkX</span>
-                                    </button>
-                                    <button onclick="selectGraphFormat('csv')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left">
-                                        <i class="fas fa-table mb-1 block"></i>
-                                        CSV
-                                        <span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">实体关系表</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- 文件上传 -->
-                            <div class="border-2 border-dashed border-purple-200 rounded-lg p-4 text-center hover:border-purple-400 transition-colors cursor-pointer" onclick="document.getElementById('graph-file-input').click()">
-                                <i class="fas fa-file-import text-purple-400 text-xl mb-2"></i>
-                                <p class="text-xs text-gray-600">选择图谱文件</p>
-                                <p class="text-[10px] text-gray-400 mt-1">.json, .graphml, .csv</p>
-                            </div>
-                            <input type="file" id="graph-file-input" class="hidden" accept=".json,.graphml,.csv,.xml">
-
-                            <!-- 格式说明 -->
-                            <div class="bg-purple-50 rounded-lg p-3 overflow-hidden">
-                                <div class="flex items-center justify-between mb-2">
-                                    <span class="text-xs font-semibold text-purple-800 whitespace-nowrap">格式要求</span>
-                                    <button onclick="showFormatExample()" class="text-[10px] text-purple-600 hover:text-purple-800 whitespace-nowrap ml-2">
-                                        <i class="fas fa-eye mr-1"></i>查看示例
-                                    </button>
-                                </div>
-                                <div id="format-description" class="text-[10px] text-gray-600 break-words leading-relaxed">
-                                    请选择一种图谱格式以查看详细要求
-                                </div>
-                            </div>
-
-                            <!-- 导入统计 -->
-                            <div id="import-stats" class="hidden bg-green-50 rounded-lg p-3">
-                                <div class="flex items-center text-green-700 mb-2">
-                                    <i class="fas fa-check-circle mr-2"></i>
-                                    <span class="text-xs font-semibold">导入成功</span>
-                                </div>
-                                <div class="grid grid-cols-2 gap-2 text-[10px]">
-                                    <div>
-                                        <span class="text-gray-600">实体节点:</span>
-                                        <span class="font-semibold text-green-700" id="import-nodes">0</span>
-                                    </div>
-                                    <div>
-                                        <span class="text-gray-600">关系边:</span>
-                                        <span class="font-semibold text-green-700" id="import-edges">0</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <button onclick="importGraph()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
-                                <i class="fas fa-upload mr-2"></i>导入图谱
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- 操作按钮 -->
-                    <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
-                        <button class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
-                            <i class="fas fa-sync-alt mr-2"></i>构建索引
-                        </button>
-                        <button class="w-full border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
-                            <i class="fas fa-trash-alt mr-2"></i>清空数据
-                        </button>
-                    </div>
                 </div>
             </aside>
 
             <!-- 主内容区 -->
-            <main class="col-span-12 md:col-span-9">
+            <main class="col-span-12">
 
                 <!-- 问答对话标签页 -->
                 <div id="chat-tab" class="tab-content active">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
-                        <div class="chat-container overflow-y-auto p-6 space-y-4 bg-gray-50" id="chat-box">
-                            <div class="flex items-start">
-                                <div class="bg-indigo-100 text-indigo-800 p-4 rounded-lg max-w-2xl text-sm">
-                                    <p class="font-semibold mb-2">👋 你好！我是 SLM-GraphRAG 助手</p>
-                                    <p>基于小型语言模型的图基增强检索生成系统。我可以：</p>
-                                    <ul class="mt-2 space-y-1 text-xs">
-                                        <li>• 回答基于知识图谱的复杂问题</li>
-                                        <li>• 展示推理路径和引用来源</li>
-                                        <li>• 支持多跳推理和语义检索</li>
-                                    </ul>
-                                    <p class="mt-2 text-xs text-indigo-600">请上传文档或直接向我提问！</p>
+                    <div class="grid grid-cols-12 gap-6 items-start">
+                        <aside class="col-span-12 xl:col-span-3">
+                            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200 xl:sticky xl:top-6">
+                                <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="toggleModelConfig()">
+                                    <h3 class="font-bold flex items-center text-sm">
+                                        <i class="fas fa-cog mr-2 text-indigo-600"></i> 模型配置
+                                    </h3>
+                                    <button class="text-indigo-600 hover:text-indigo-800 text-xs">
+                                        <i class="fas fa-chevron-down" id="model-config-toggle"></i>
+                                    </button>
+                                </div>
+                                <div id="model-config-panel" class="space-y-4">
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">SLM 模型</label>
+                                        <select id="llm-model" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                            <option>qwen3:4b-instruct (本地)</option>
+                                            <option>phi-4-mini-instruct (本地)</option>
+                                            <option>minicpm3-4b (本地)</option>
+                                            <option>gpt-4o-mini (API)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">
+                                            嵌入模型 (Embedding Model)
+                                            <i class="fas fa-info-circle ml-1 text-gray-400" title="用于文本向量化和语义相似度计算"></i>
+                                        </label>
+                                        <select id="embedding-model" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                            <option value="all-MiniLM-L6-v2">all-MiniLM-L6-v2 (轻量级)</option>
+                                            <option value="bge-small-zh-v1.5">bge-small-zh-v1.5 (中文优化)</option>
+                                            <option value="text-embedding-3-small">text-embedding-3-small (OpenAI)</option>
+                                            <option value="nomic-embed-text">nomic-embed-text (本地)</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-xs text-gray-500 mb-1">检索模式</label>
+                                        <select id="retrieval-mode" class="w-full border rounded p-2 text-sm bg-gray-50 focus:ring-2 focus:ring-indigo-500 focus:outline-none">
+                                            <option value="hybrid">hybrid (混合检索)</option>
+                                            <option value="local">local (路径级别检索)</option>
+                                            <option value="naive">naive (向量检索)</option>
+                                        </select>
+                                    </div>
+                                    <div class="pt-2 border-t border-gray-200 space-y-3">
+                                        <button onclick="startModelDeployment(this)" class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                                            <i class="fas fa-rocket mr-2"></i>启动部署
+                                        </button>
+                                        <div class="deployment-feedback hidden rounded-lg border border-green-200 bg-green-50 p-3 text-xs text-green-700 space-y-1"></div>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        </aside>
+                        <div class="col-span-12 xl:col-span-9">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 flex flex-col overflow-hidden">
+                                <div class="chat-container overflow-y-auto p-6 space-y-4 bg-gray-50" id="chat-box">
+                                    <div class="flex items-start">
+                                        <div class="bg-indigo-100 text-indigo-800 p-4 rounded-lg max-w-2xl text-sm">
+                                            <p class="font-semibold mb-2">👋 你好！我是 SLM-GraphRAG 助手</p>
+                                            <p>请上传文档构建索引或导入知识图谱</p>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end mb-4">
+                                        <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-sm max-w-2xl text-sm shadow-md">
+                                            When does Li Hua plan to celebrate Chinese Lunar New Year?
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start mb-4">
+                                        <div class="bg-white border p-4 rounded-2xl rounded-tl-sm max-w-3xl text-sm shadow-sm">
+                                            <div class="text-gray-700">
+                                                Li Hua plans to celebrate Chinese Lunar New Year on <strong>January 18th, 2026</strong>. This is explicitly mentioned in the conversation logs, where LiHua states: <em>"So, I'm thinking of celebrating Chinese Lunar New Year at my place on Jan 18th. Wanna come over and join the fun?"</em> The celebration is scheduled to take place at LiHua's home, and it is described as a festive event involving traditional food such as dumplings, green tea, and fruity drinks, along with decorations and social gatherings among friends.
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <div class="flex justify-end mb-4">
+                                        <div class="bg-indigo-600 text-white p-4 rounded-2xl rounded-tr-sm max-w-2xl text-sm shadow-md">
+                                            Who wished Li Hua a happy Lunar New Year?
+                                        </div>
+                                    </div>
+                                    <div class="flex items-start mb-4">
+                                        <div class="bg-white border p-4 rounded-2xl rounded-tl-sm max-w-3xl text-sm shadow-sm">
+                                            <div class="text-gray-700">
+                                                Several individuals wished Li Hua a happy Lunar New Year, based on the provided data:
+                                                <br><br>
+                                                <strong>WolfgangSchulz</strong> expressed well-wishes on multiple occasions, including in messages on January 19, 2026, and January 13, 2026. He specifically said, "Happy Lunar New Year! 🎉" and engaged in festive conversation about traditions and food.
+                                                <br><br>
+                                                <strong>AdamSmith</strong> sent a message on January 19, 2026, wishing Li Hua a "very happy Lunar New Year" and inquired about her celebrations, showing mutual interest in the festivities.
+                                                <br><br>
+                                                <strong>JenniferMoore</strong> also extended holiday greetings on January 13, 2026, though her message was more focused on Li Hua's fitness goals. She said, "Hey Li Hua! Happy Lunar New Year!" and included a warm, encouraging tone.
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
 
-                        <div class="p-4 border-t bg-white">
-                            <div class="relative flex items-center">
-                                <input type="text" id="user-input" placeholder="输入您的问题... 例如：'上周三我和谁讨论了项目进度？'" class="w-full border rounded-full py-3 px-6 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner">
-                                <button onclick="sendMessage()" class="absolute right-2 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors">
-                                    <i class="fas fa-paper-plane"></i>
-                                </button>
-                            </div>
-                            <div class="flex justify-between mt-3 text-[10px] text-gray-400 px-2">
-                                <span>Token 消耗: <span id="token-count">0</span></span>
-                                <span>检索耗时: <span id="retrieval-time">0</span>ms</span>
-                                <span>生成耗时: <span id="generation-time">0</span>ms</span>
+                                <div class="p-4 border-t bg-white">
+                                    <div class="relative flex items-center">
+                                        <input type="text" id="user-input" placeholder="输入您的问题... 例如：'上周三我和谁讨论了项目进度？'" class="w-full border rounded-full py-3 px-6 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner">
+                                        <button onclick="sendMessage()" class="absolute right-2 bg-indigo-600 text-white p-2 rounded-full hover:bg-indigo-700 transition-colors">
+                                            <i class="fas fa-paper-plane"></i>
+                                        </button>
+                                    </div>
+                                    <div class="flex justify-between mt-3 text-[10px] text-gray-400 px-2">
+                                    </div>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -384,36 +280,179 @@
                     </div>
                 </div>
 
-                <!-- 文档管理标签页 -->
+                <!-- 数据导入标签页 -->
                 <div id="documents-tab" class="tab-content">
-                    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-lg font-bold">文档列表</h2>
-                            <div class="flex space-x-2">
-                                <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
-                                    <i class="fas fa-upload mr-1"></i>上传文档
-                                </button>
-                                <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
-                                    <i class="fas fa-sync-alt mr-1"></i>刷新
+                    <div class="grid grid-cols-12 gap-6">
+                        <div class="col-span-12 xl:col-span-5">
+                            <div class="bg-white p-5 rounded-xl shadow-sm border border-gray-200">
+                            <div class="flex items-center justify-between mb-4 cursor-pointer" onclick="toggleDataManagement()">
+                                <h3 class="font-bold flex items-center text-sm">
+                                    <i class="fas fa-upload mr-2 text-indigo-600"></i> 数据管理
+                                </h3>
+                                <button class="text-indigo-600 hover:text-indigo-800 text-xs">
+                                    <i class="fas fa-chevron-down" id="data-management-toggle"></i>
                                 </button>
                             </div>
+                            <div id="data-management-panel">
+                                <div class="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-indigo-400 transition-colors cursor-pointer" onclick="document.getElementById('file-input').click()">
+                                    <i class="fas fa-cloud-upload-alt text-gray-400 text-2xl mb-2"></i>
+                                    <p class="text-xs text-gray-500">点击或拖拽上传文件</p>
+                                    <p class="text-[10px] text-gray-400 mt-1">支持 .txt, .pdf, .md, .docx</p>
+                                </div>
+                                <input type="file" id="file-input" class="hidden" multiple accept=".txt,.pdf,.md,.docx">
+
+                                <div class="mt-4 pt-4 border-t border-gray-200">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="font-semibold text-sm text-gray-700">
+                                            <i class="fas fa-cut mr-2 text-indigo-500"></i>文档分块配置
+                                        </h4>
+                                        <button onclick="toggleChunkConfig()" class="text-indigo-600 hover:text-indigo-800 text-xs">
+                                            <i class="fas fa-chevron-down" id="chunk-config-toggle"></i>
+                                        </button>
+                                    </div>
+
+                                    <div id="chunk-config-panel" class="space-y-3">
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-2">快速预设</label>
+                                            <div class="grid grid-cols-2 md:grid-cols-4 gap-2">
+                                                <button onclick="setChunkPreset(512, 50)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">精细</button>
+                                                <button onclick="setChunkPreset(1200, 100)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors bg-indigo-50 border-indigo-300">平衡</button>
+                                                <button onclick="setChunkPreset(2048, 200)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">粗粒度</button>
+                                                <button onclick="setChunkPreset(4096, 400)" class="chunk-preset px-2 py-1.5 text-xs border rounded hover:bg-indigo-50 hover:border-indigo-300 transition-colors">长文档</button>
+                                            </div>
+                                        </div>
+
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                            <div>
+                                                <label class="block text-xs text-gray-500 mb-1">
+                                                    块大小 (tokens)
+                                                    <i class="fas fa-info-circle ml-1 text-gray-400" title="每个文本块的最大token数"></i>
+                                                </label>
+                                                <input type="number" id="chunk-size" value="1200" min="256" max="8192" step="64" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="updateChunkDisplay()">
+                                                <p class="text-[10px] text-gray-400 mt-1">建议: 512-4096</p>
+                                            </div>
+                                            <div>
+                                                <label class="block text-xs text-gray-500 mb-1">
+                                                    重叠窗口 (tokens)
+                                                    <i class="fas fa-info-circle ml-1 text-gray-400" title="相邻块之间的重叠token数，确保上下文连续性"></i>
+                                                </label>
+                                                <input type="number" id="chunk-overlap" value="100" min="0" max="1024" step="10" class="w-full border rounded p-2 text-sm focus:ring-2 focus:ring-indigo-500 focus:outline-none" onchange="updateChunkDisplay()">
+                                                <p class="text-[10px] text-gray-400 mt-1">建议: 10-20% 块大小</p>
+                                            </div>
+                                        </div>
+
+                                        <div class="bg-gray-50 rounded-lg p-3">
+                                            <div class="flex items-center justify-between text-xs">
+                                                <span class="text-gray-600">预估分块数 (1MB文档):</span>
+                                                <span class="font-semibold text-indigo-600" id="estimated-chunks">~850 块</span>
+                                            </div>
+                                            <div class="flex items-center justify-between text-xs mt-1">
+                                                <span class="text-gray-600">重叠率:</span>
+                                                <span class="font-semibold text-gray-700" id="overlap-ratio">8.3%</span>
+                                            </div>
+                                            <p class="text-[10px] text-gray-400 mt-2">
+                                                <i class="fas fa-lightbulb mr-1"></i>
+                                                <span id="chunk-tip">平衡设置，适合大多数文档类型</span>
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 pt-4 border-t border-gray-200">
+                                    <div class="flex items-center justify-between mb-3">
+                                        <h4 class="font-semibold text-sm text-gray-700">
+                                            <i class="fas fa-project-diagram mr-2 text-purple-500"></i>导入知识图谱
+                                        </h4>
+                                        <button onclick="toggleGraphImport()" class="text-indigo-600 hover:text-indigo-800 text-xs">
+                                            <i class="fas fa-chevron-right" id="graph-import-toggle"></i>
+                                        </button>
+                                    </div>
+
+                                    <div id="graph-import-panel" class="space-y-3" style="display: none;">
+                                        <div>
+                                            <label class="block text-xs text-gray-500 mb-2">图谱格式</label>
+                                            <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                                                <button onclick="selectGraphFormat('json')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"><i class="fas fa-code mb-1 block"></i>JSON<span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">通用格式</span></button>
+                                                <button onclick="selectGraphFormat('graphml')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"><i class="fas fa-sitemap mb-1 block"></i>GraphML<span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">Gephi/NetworkX</span></button>
+                                                <button onclick="selectGraphFormat('csv')" class="graph-format-btn px-2 py-2 text-xs border rounded hover:bg-purple-50 hover:border-purple-300 transition-colors text-left"><i class="fas fa-table mb-1 block"></i>CSV<span class="block text-[10px] text-gray-400 whitespace-nowrap overflow-hidden">实体关系表</span></button>
+                                            </div>
+                                        </div>
+
+                                        <div class="border-2 border-dashed border-purple-200 rounded-lg p-4 text-center hover:border-purple-400 transition-colors cursor-pointer" onclick="document.getElementById('graph-file-input').click()">
+                                            <i class="fas fa-file-import text-purple-400 text-xl mb-2"></i>
+                                            <p class="text-xs text-gray-600">选择图谱文件</p>
+                                            <p class="text-[10px] text-gray-400 mt-1">.json, .graphml, .csv</p>
+                                        </div>
+                                        <input type="file" id="graph-file-input" class="hidden" accept=".json,.graphml,.csv,.xml">
+
+                                        <div class="bg-purple-50 rounded-lg p-3 overflow-hidden">
+                                            <div class="flex items-center justify-between mb-2">
+                                                <span class="text-xs font-semibold text-purple-800 whitespace-nowrap">格式要求</span>
+                                                <button onclick="showFormatExample()" class="text-[10px] text-purple-600 hover:text-purple-800 whitespace-nowrap ml-2"><i class="fas fa-eye mr-1"></i>查看示例</button>
+                                            </div>
+                                            <div id="format-description" class="text-[10px] text-gray-600 break-words leading-relaxed">请选择一种图谱格式以查看详细要求</div>
+                                        </div>
+
+                                        <div id="import-stats" class="hidden bg-green-50 rounded-lg p-3">
+                                            <div class="flex items-center text-green-700 mb-2">
+                                                <i class="fas fa-check-circle mr-2"></i>
+                                                <span class="text-xs font-semibold">导入成功</span>
+                                            </div>
+                                            <div class="grid grid-cols-2 gap-2 text-[10px]">
+                                                <div><span class="text-gray-600">实体节点:</span><span class="font-semibold text-green-700" id="import-nodes">0</span></div>
+                                                <div><span class="text-gray-600">关系边:</span><span class="font-semibold text-green-700" id="import-edges">0</span></div>
+                                            </div>
+                                        </div>
+
+                                        <button onclick="importGraph()" class="w-full bg-purple-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-purple-700 transition-colors">
+                                            <i class="fas fa-upload mr-2"></i>导入图谱
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div class="mt-4 pt-4 border-t border-gray-200 space-y-2">
+                                    <button class="w-full bg-indigo-600 text-white py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 transition-colors">
+                                        <i class="fas fa-sync-alt mr-2"></i>构建索引
+                                    </button>
+                                    <button class="w-full border border-gray-300 text-gray-700 py-2 rounded-lg text-sm hover:bg-gray-50 transition-colors">
+                                        <i class="fas fa-trash-alt mr-2"></i>清空数据
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div class="overflow-x-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-gray-50">
-                                    <tr>
-                                        <th class="text-left p-3 font-semibold">文件名</th>
-                                        <th class="text-left p-3 font-semibold">大小</th>
-                                        <th class="text-left p-3 font-semibold">上传时间</th>
-                                        <th class="text-left p-3 font-semibold">状态</th>
-                                        <th class="text-center p-3 font-semibold">索引统计</th>
-                                        <th class="text-center p-3 font-semibold">操作</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="document-list">
-                                    <!-- 动态生成文档列表 -->
-                                </tbody>
-                            </table>
+                        </div>
+
+                        <div class="col-span-12 xl:col-span-7">
+                            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-full">
+                            <div class="flex justify-between items-center mb-6">
+                                <h2 class="text-lg font-bold">文档列表</h2>
+                                <div class="flex space-x-2">
+                                    <button class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700">
+                                        <i class="fas fa-upload mr-1"></i>上传文档
+                                    </button>
+                                    <button class="px-3 py-1 text-sm border border-gray-300 rounded hover:bg-gray-50">
+                                        <i class="fas fa-sync-alt mr-1"></i>刷新
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-sm">
+                                    <thead class="bg-gray-50">
+                                        <tr>
+                                            <th class="text-left p-3 font-semibold">文件名</th>
+                                            <th class="text-left p-3 font-semibold">大小</th>
+                                            <th class="text-left p-3 font-semibold">上传时间</th>
+                                            <th class="text-left p-3 font-semibold">状态</th>
+                                            <th class="text-center p-3 font-semibold">索引统计</th>
+                                            <th class="text-center p-3 font-semibold">操作</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="document-list">
+                                        <!-- 动态生成文档列表 -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
                         </div>
                     </div>
                 </div>
@@ -446,34 +485,12 @@
                             <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
                                 <div class="flex items-center justify-between">
                                     <div>
-                                        <p class="text-xs text-gray-500">平均响应</p>
-                                        <p class="text-2xl font-bold text-yellow-600" id="monitor-latency">1.2s</p>
-                                        <p class="text-xs text-gray-400">P95: <span id="monitor-p95">2.1s</span></p>
-                                    </div>
-                                    <i class="fas fa-clock text-3xl text-yellow-200"></i>
-                                </div>
-                            </div>
-                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                                <div class="flex items-center justify-between">
-                                    <div>
                                         <p class="text-xs text-gray-500">内存使用</p>
-                                        <p class="text-2xl font-bold text-purple-600" id="monitor-memory">6.2 GB</p>
-                                        <p class="text-xs text-gray-400">GPU: <span id="monitor-gpu">3.1 GB</span></p>
+                                        <p class="text-2xl font-bold text-purple-600" id="monitor-memory">6.8 GB</p>
+                                        <p class="text-xs text-gray-400">GPU: <span id="monitor-gpu">19.2 GB</span></p>
                                     </div>
                                     <i class="fas fa-memory text-3xl text-purple-200"></i>
                                 </div>
-                            </div>
-                        </div>
-
-                        <!-- 图表区域 -->
-                        <div class="grid grid-cols-2 gap-6">
-                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                                <h3 class="font-bold text-sm mb-4">查询响应时间趋势</h3>
-                                <canvas id="latency-chart" height="200"></canvas>
-                            </div>
-                            <div class="bg-white p-4 rounded-xl shadow-sm border border-gray-200">
-                                <h3 class="font-bold text-sm mb-4">每日查询量统计</h3>
-                                <canvas id="queries-chart" height="200"></canvas>
                             </div>
                         </div>
 
@@ -526,6 +543,497 @@
     </div>
 
     <script>
+        const mockData = /* LIGHTRAG_MOCK_DATA_START */ {
+        "chat": {
+                "welcome": {
+                        "title": "👋 你好！我是 SLM-GraphRAG 助手",
+                        "description": "",
+                        "footer": ""
+                },
+                "inputPlaceholder": "输入您的问题",
+                "mockResponse": {
+                        "answerTemplate": "根据当前日志快照，系统围绕“{{query}}”对应的知识范围已经完成多轮文档处理与实体关系抽取。最新一轮图谱写入结果为 606 个节点、1225 条边，文档分块、实体向量与关系向量均已完成入库。这里展示的是基于真实日志整理后的模拟数据。",
+                        "path": [
+                                "日志定位",
+                                "批次汇总",
+                                "图谱统计",
+                                "答案生成"
+                        ],
+                        "retrievalTimeRange": [
+                                900,
+                                1450
+                        ],
+                        "generationTimeRange": [
+                                420,
+                                780
+                        ],
+                        "tokenRange": [
+                                900,
+                                1500
+                        ]
+                }
+        },
+        "monitor": {
+                "summary": {
+                        "nodes": "606",
+                        "edges": "1,225",
+                        "memory": "6.8 GB",
+                        "gpu": "19.2 GB"
+                },
+                "logs": [
+                        {
+                                "time": "2025-12-09 17:30:56,446",
+                                "level": "info",
+                                "msg": "Logger initialized for working directory: ./tests/Qwen3-4B-Instruct-2507_vllm"
+                        },
+                        {
+                                "time": "2025-12-09 17:30:56,462",
+                                "level": "info",
+                                "msg": "已存储 2 个新的唯一文档，Number of batches to process: 1"
+                        },
+                        {
+                                "time": "2025-12-09 17:31:31,603",
+                                "level": "info",
+                                "msg": "Writing graph with 42 nodes, 49 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:32:16,982",
+                                "level": "info",
+                                "msg": "Writing graph with 98 nodes, 128 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:33:21,379",
+                                "level": "info",
+                                "msg": "Writing graph with 217 nodes, 278 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:34:30,862",
+                                "level": "info",
+                                "msg": "Writing graph with 268 nodes, 413 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:35:32,351",
+                                "level": "info",
+                                "msg": "Writing graph with 307 nodes, 529 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:36:38,314",
+                                "level": "info",
+                                "msg": "Writing graph with 358 nodes, 654 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:37:44,904",
+                                "level": "info",
+                                "msg": "Writing graph with 392 nodes, 755 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:38:55,491",
+                                "level": "info",
+                                "msg": "Writing graph with 453 nodes, 896 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:40:12,636",
+                                "level": "info",
+                                "msg": "Writing graph with 500 nodes, 1003 edges"
+                        },
+                        {
+                                "time": "2025-12-09 17:41:52,256",
+                                "level": "info",
+                                "msg": "Writing graph with 606 nodes, 1225 edges"
+                        }
+                ]
+        },
+        "entities": {
+                "emptyState": {
+                        "icon": "fas fa-mouse-pointer",
+                        "text": "请从左侧选择一个实体查看详情"
+                },
+                "items": [
+                        {
+                                "id": "entity-SLM-RAG",
+                                "name": "SLM-RAG",
+                                "type": "系统",
+                                "desc": "负责文档处理、向量写入、实体关系抽取和图谱落盘的主流程。",
+                                "relations": 1225
+                        },
+                        {
+                                "id": "entity-qwen3-4b-instruct-2507",
+                                "name": "Qwen3-4B-Instruct-2507",
+                                "type": "模型",
+                                "desc": "本轮实验工作目录对应的核心模型实例。",
+                                "relations": 606
+                        },
+                        {
+                                "id": "entity-json-doc-status-storage",
+                                "name": "json_doc_status_storage",
+                                "type": "存储",
+                                "desc": "文档状态 KV 存储，日志初始化时为空。",
+                                "relations": 20
+                        },
+                        {
+                                "id": "entity-llm-response-cache",
+                                "name": "llm_response_cache",
+                                "type": "存储",
+                                "desc": "SLM 响应缓存 KV 存储，初始化时为空。",
+                                "relations": 20
+                        },
+                        {
+                                "id": "entity-text-chunks",
+                                "name": "text_chunks",
+                                "type": "索引",
+                                "desc": "文档分块向量索引，10 轮累计写入 27 个 chunk vectors。",
+                                "relations": 27
+                        },
+                        {
+                                "id": "entity-entities",
+                                "name": "entities",
+                                "type": "索引",
+                                "desc": "实体向量索引，最后一轮插入 295 个实体向量。",
+                                "relations": 295
+                        },
+                        {
+                                "id": "entity-entities-name",
+                                "name": "entities_name",
+                                "type": "索引",
+                                "desc": "实体名称向量索引，最后一轮插入 295 个名称向量。",
+                                "relations": 295
+                        },
+                        {
+                                "id": "entity-relationships",
+                                "name": "relationships",
+                                "type": "索引",
+                                "desc": "关系向量索引，最后一轮插入 451 个关系向量。",
+                                "relations": 451
+                        },
+                        {
+                                "id": "entity-graph-writer",
+                                "name": "Graph Writer",
+                                "type": "流程",
+                                "desc": "负责将抽取后的实体关系写入图谱，最终写入 606 节点和 1225 边。",
+                                "relations": 10
+                        },
+                        {
+                                "id": "entity-document-pipeline",
+                                "name": "Document Processing Pipeline",
+                                "type": "流程",
+                                "desc": "文档处理主链路，每轮完成后都会进入实体关系提取阶段。",
+                                "relations": 10
+                        }
+                ]
+        },
+        "documents": {
+                "items": [
+                        {
+                                "name": "batch-01-doc-a.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:30:56",
+                                "status": "completed",
+                                "entities": 42,
+                                "relations": 49,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-01-doc-b.txt",
+                                "size": "3 chunks",
+                                "time": "2025-12-09 17:30:57",
+                                "status": "completed",
+                                "entities": 42,
+                                "relations": 49,
+                                "chunks": 3
+                        },
+                        {
+                                "name": "batch-02-doc-a.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:31:31",
+                                "status": "completed",
+                                "entities": 87,
+                                "relations": 104,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-02-doc-b.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:31:31",
+                                "status": "completed",
+                                "entities": 87,
+                                "relations": 104,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-03-doc-a.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:32:16",
+                                "status": "completed",
+                                "entities": 175,
+                                "relations": 219,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-03-doc-b.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:32:17",
+                                "status": "completed",
+                                "entities": 175,
+                                "relations": 219,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-04-doc-a.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:33:21",
+                                "status": "completed",
+                                "entities": 179,
+                                "relations": 240,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-04-doc-b.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:33:21",
+                                "status": "completed",
+                                "entities": 179,
+                                "relations": 240,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-05-doc-a.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:34:30",
+                                "status": "completed",
+                                "entities": 177,
+                                "relations": 242,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-05-doc-b.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:34:30",
+                                "status": "completed",
+                                "entities": 177,
+                                "relations": 242,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-06-doc-a.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:35:32",
+                                "status": "completed",
+                                "entities": 204,
+                                "relations": 300,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-06-doc-b.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:35:32",
+                                "status": "completed",
+                                "entities": 204,
+                                "relations": 300,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-07-doc-a.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:36:38",
+                                "status": "completed",
+                                "entities": 206,
+                                "relations": 280,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-07-doc-b.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:36:38",
+                                "status": "completed",
+                                "entities": 206,
+                                "relations": 280,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-08-doc-a.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:37:45",
+                                "status": "completed",
+                                "entities": 235,
+                                "relations": 348,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-08-doc-b.txt",
+                                "size": "1 chunk",
+                                "time": "2025-12-09 17:37:45",
+                                "status": "completed",
+                                "entities": 235,
+                                "relations": 348,
+                                "chunks": 1
+                        },
+                        {
+                                "name": "batch-09-doc-a.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:38:55",
+                                "status": "completed",
+                                "entities": 273,
+                                "relations": 360,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-09-doc-b.txt",
+                                "size": "3 chunks",
+                                "time": "2025-12-09 17:38:55",
+                                "status": "completed",
+                                "entities": 273,
+                                "relations": 360,
+                                "chunks": 3
+                        },
+                        {
+                                "name": "batch-10-doc-a.txt",
+                                "size": "2 chunks",
+                                "time": "2025-12-09 17:40:12",
+                                "status": "completed",
+                                "entities": 295,
+                                "relations": 451,
+                                "chunks": 2
+                        },
+                        {
+                                "name": "batch-10-doc-b.txt",
+                                "size": "3 chunks",
+                                "time": "2025-12-09 17:40:12",
+                                "status": "completed",
+                                "entities": 295,
+                                "relations": 451,
+                                "chunks": 3
+                        }
+                ]
+        },
+        "graph": {
+                "elements": [
+                        {
+                                "data": {
+                                        "id": "SLM-RAG",
+                                        "label": "SLM-RAG",
+                                        "type": "技术"
+                                }
+                        },
+                        {
+                                "data": {
+                                        "id": "qwen",
+                                        "label": "Qwen3-4B-Instruct-2507",
+                                        "type": "模型"
+                                }
+                        },
+                        {
+                                "data": {
+                                        "id": "chunks",
+                                        "label": "text_chunks",
+                                        "type": "技术"
+                                }
+                        },
+                        {
+                                "data": {
+                                        "id": "entities",
+                                        "label": "entities",
+                                        "type": "技术"
+                                }
+                        },
+                        {
+                                "data": {
+                                        "id": "relations",
+                                        "label": "relationships",
+                                        "type": "技术"
+                                }
+                        },
+                        {
+                                "data": {
+                                        "id": "graph",
+                                        "label": "knowledge_graph",
+                                        "type": "技术"
+                                }
+                        },
+                        {
+                                "data": {
+                                        "source": "qwen",
+                                        "target": "SLM-RAG",
+                                        "weight": 0.95
+                                }
+                        },
+                        {
+                                "data": {
+                                        "source": "SLM-RAG",
+                                        "target": "chunks",
+                                        "weight": 0.82
+                                }
+                        },
+                        {
+                                "data": {
+                                        "source": "chunks",
+                                        "target": "entities",
+                                        "weight": 0.92
+                                }
+                        },
+                        {
+                                "data": {
+                                        "source": "entities",
+                                        "target": "relations",
+                                        "weight": 0.96
+                                }
+                        },
+                        {
+                                "data": {
+                                        "source": "relations",
+                                        "target": "graph",
+                                        "weight": 0.98
+                                }
+                        }
+                ]
+        },
+        "graphImport": {
+                "formats": {
+                        "json": {
+                                "title": "JSON 格式",
+                                "description": "通用 JSON 图谱格式，包含节点和边数组。",
+                                "example": "{\n  \"nodes\": [\n    {\"id\": \"entity1\", \"name\": \"实体1\", \"type\": \"人物\"}\n  ],\n  \"edges\": [\n    {\"source\": \"entity1\", \"target\": \"entity2\", \"relation\": \"关联\", \"weight\": 0.9}\n  ]\n}"
+                        },
+                        "graphml": {
+                                "title": "GraphML 格式",
+                                "description": "适合 Gephi、NetworkX 等工具导出的标准图格式。",
+                                "example": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<graphml>\n  <graph id=\"G\" edgedefault=\"directed\">\n    <node id=\"entity1\"/>\n    <edge source=\"entity1\" target=\"entity2\"/>\n  </graph>\n</graphml>"
+                        },
+                        "csv": {
+                                "title": "CSV 格式",
+                                "description": "适合以实体表和关系表两份文件导入。",
+                                "example": "entities.csv:\nid,name,type\nentity1,张三,人物\n\nrelations.csv:\nsource,target,relation,weight\nentity1,entity2,参与,0.95"
+                        }
+                }
+        }
+} /* LIGHTRAG_MOCK_DATA_END */;
+        const domBindings = /* LIGHTRAG_DOM_BINDINGS_START */ [
+        {
+                "selector": "#token-count",
+                "property": "textContent",
+                "value": "0"
+        },
+        {
+                "selector": "#retrieval-time",
+                "property": "textContent",
+                "value": "0"
+        },
+        {
+                "selector": "#generation-time",
+                "property": "textContent",
+                "value": "0"
+        },
+        {
+                "selector": "#monitor-tab .rounded-xl.border.border-emerald-100.bg-emerald-50 .flex.items-center.justify-between.text-sm span:last-child",
+                "property": "textContent",
+                "value": "运行完成"
+        },
+        {
+                "selector": "#monitor-tab .rounded-xl.border.border-emerald-100.bg-emerald-50 p",
+                "property": "textContent",
+                "value": "本轮日志显示系统已连续完成 10 批次入库与图谱写入，最终达到 606 节点和 1225 条边。"
+        }
+] /* LIGHTRAG_DOM_BINDINGS_END */;
+
         // ==================== 全局状态 ====================
         const state = {
             documents: [],
@@ -562,9 +1070,7 @@
 
                 // 控制侧边栏显示
                 const sidebar = document.getElementById('sidebar');
-                if (tabName === 'chat') {
-                    sidebar.style.display = 'block';
-                } else {
+                if (sidebar) {
                     sidebar.style.display = 'none';
                 }
             });
@@ -645,6 +1151,35 @@
             }
         }
 
+        function startModelDeployment(button) {
+            const panel = button.closest('.space-y-4');
+            const llmSelect = panel?.querySelector('#llm-model');
+            const embeddingSelect = panel?.querySelector('#embedding-model');
+            const feedback = panel?.querySelector('.deployment-feedback');
+
+            if (!feedback) return;
+
+            const originalHtml = button.innerHTML;
+            button.disabled = true;
+            button.classList.add('opacity-70', 'cursor-not-allowed');
+            button.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>部署中...';
+
+            setTimeout(() => {
+                const embeddingName = embeddingSelect?.options[embeddingSelect.selectedIndex]?.text || '嵌入模型';
+                const llmName = llmSelect?.options[llmSelect.selectedIndex]?.text || '语言模型';
+
+                feedback.classList.remove('hidden');
+                feedback.innerHTML = `
+                    <div>嵌入模型本地部署成功：${embeddingName}</div>
+                    <div>语言模型本地部署成功：${llmName}</div>
+                `;
+
+                button.disabled = false;
+                button.classList.remove('opacity-70', 'cursor-not-allowed');
+                button.innerHTML = originalHtml;
+            }, 900);
+        }
+
         // ==================== 数据管理折叠功能 ====================
         function toggleDataManagement() {
             const panel = document.getElementById('data-management-panel');
@@ -661,7 +1196,7 @@
         }
 
         // ==================== 知识图谱导入功能 ====================
-        const graphFormatDescriptions = {
+        const graphFormatDescriptions = mockData.graphImport?.formats || {
             json: {
                 title: 'JSON 格式',
                 description: '通用的 JSON 图谱格式，包含节点和边数组',
@@ -1022,6 +1557,22 @@ entity1,entity2,参与,0.95`
         }
 
         function generateMockResponse(query) {
+            const responseConfig = mockData.chat?.mockResponse;
+            if (responseConfig) {
+                const retrievalRange = responseConfig.retrievalTimeRange || [800, 1300];
+                const generationRange = responseConfig.generationTimeRange || [400, 700];
+                const tokenRange = responseConfig.tokenRange || [800, 1200];
+                const randomInRange = ([min, max]) => Math.floor(Math.random() * (max - min + 1)) + min;
+
+                return {
+                    answer: (responseConfig.answerTemplate || '').replaceAll('{{query}}', query),
+                    path: responseConfig.path || ['日志定位', '批次汇总', '答案生成'],
+                    retrievalTime: randomInRange(retrievalRange),
+                    generationTime: randomInRange(generationRange),
+                    tokens: randomInRange(tokenRange)
+                };
+            }
+
             const responses = {
                 'default': {
                     answer: `根据知识图谱检索结果，我找到了与"${query}"相关的信息。系统通过验证优先的实体关系抽取方法构建了知识图谱，并使用语义引导的路径检索算法定位了关键信息节点。<br><br>该回答基于 <strong>Semantic-Flow RAG</strong> 方法生成，整合了多个相关文档的内容，确保了回答的准确性和完整性。`,
@@ -1082,6 +1633,8 @@ entity1,entity2,参与,0.95`
                 });
 
                 console.log('转换后的元素数量:', elements.length);
+            } else if (Array.isArray(mockData.graph?.elements) && mockData.graph.elements.length > 0) {
+                elements = mockData.graph.elements;
             } else {
                 // 模拟图谱数据
                 console.log('使用模拟图谱数据');
@@ -1492,8 +2045,39 @@ entity1,entity2,参与,0.95`
             alert('图谱导出功能：将在实际实现中导出为 JSON 或 GraphML 格式');
         }
 
-        // ==================== 文档管理 ====================
+        // ==================== 数据导入 ====================
         function renderDocuments() {
+            if (Array.isArray(mockData.documents?.items) && mockData.documents.items.length > 0) {
+                const statusMap = {
+                    'completed': '<span class="px-2 py-1 bg-green-100 text-green-800 rounded text-xs">已完成</span>',
+                    'processing': '<span class="px-2 py-1 bg-yellow-100 text-yellow-800 rounded text-xs">构建中</span>',
+                    'failed': '<span class="px-2 py-1 bg-red-100 text-red-800 rounded text-xs">失败</span>'
+                };
+
+                const tbody = document.getElementById('document-list');
+                tbody.innerHTML = mockData.documents.items.map(doc => `
+                    <tr class="border-b hover:bg-gray-50">
+                        <td class="p-3">
+                            <div class="flex items-center">
+                                <i class="fas fa-file-pdf text-red-500 mr-2"></i>
+                                ${doc.name}
+                            </div>
+                        </td>
+                        <td class="p-3 text-gray-600">${doc.size}</td>
+                        <td class="p-3 text-gray-600 text-xs">${doc.time}</td>
+                        <td class="p-3">${statusMap[doc.status] || '-'}</td>
+                        <td class="p-3 text-center text-xs text-gray-600">
+                            ${doc.entities > 0 ? `${doc.entities} 实体 / ${doc.relations} 关系 / ${doc.chunks} 分块` : '-'}
+                        </td>
+                        <td class="p-3 text-center">
+                            <button class="text-indigo-600 hover:text-indigo-800 mr-2"><i class="fas fa-eye"></i></button>
+                            <button class="text-red-600 hover:text-red-800"><i class="fas fa-trash"></i></button>
+                        </td>
+                    </tr>
+                `).join('');
+                return;
+            }
+
             // LiHua-World 数据集文件夹列表
             const folderNames = [
                 'bakery_deliver', 'week1', 'week2', 'week3', 'week4', 'week5', 'week6', 'week7', 'week8', 'week9',
@@ -1585,55 +2169,13 @@ entity1,entity2,参与,0.95`
 
         // ==================== 系统监控 ====================
         function initCharts() {
-            if (state.charts.latency) return;
-
-            // 响应时间趋势图
-            const latencyCtx = document.getElementById('latency-chart').getContext('2d');
-            state.charts.latency = new Chart(latencyCtx, {
-                type: 'line',
-                data: {
-                    labels: ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00'],
-                    datasets: [{
-                        label: '响应时间 (ms)',
-                        data: [1200, 980, 1450, 1100, 1300, 1050],
-                        borderColor: '#4f46e5',
-                        backgroundColor: 'rgba(79, 70, 229, 0.1)',
-                        fill: true,
-                        tension: 0.4
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-
-            // 查询量统计图
-            const queriesCtx = document.getElementById('queries-chart').getContext('2d');
-            state.charts.queries = new Chart(queriesCtx, {
-                type: 'bar',
-                data: {
-                    labels: ['周一', '周二', '周三', '周四', '周五', '周六', '周日'],
-                    datasets: [{
-                        label: '查询数',
-                        data: [120, 156, 142, 178, 134, 98, 85],
-                        backgroundColor: '#10b981'
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
-            });
-
-            // 初始化日志
+            if (document.getElementById('system-log')?.dataset.initialized === 'true') return;
             initLogs();
+            document.getElementById('system-log').dataset.initialized = 'true';
         }
 
         function initLogs() {
-            const mockLogs = [
+            const mockLogs = mockData.monitor?.logs || [
                 { time: '2025-02-27 10:23:15', level: 'info', msg: '开始处理 document.pdf' },
                 { time: '2025-02-27 10:23:18', level: 'info', msg: 'VF-ERE 初始抽取完成，发现 23 个实体' },
                 { time: '2025-02-27 10:23:20', level: 'info', msg: '第 1 轮迭代修正完成' },
@@ -1687,6 +2229,8 @@ entity1,entity2,参与,0.95`
                 // 按关系数排序，显示前100个
                 entitiesToDisplay.sort((a, b) => b.relations - a.relations);
                 entitiesToDisplay = entitiesToDisplay.slice(0, 100);
+            } else if (Array.isArray(mockData.entities?.items) && mockData.entities.items.length > 0) {
+                entitiesToDisplay = mockData.entities.items;
             } else {
                 // 使用模拟数据
                 entitiesToDisplay = [
@@ -1742,18 +2286,27 @@ entity1,entity2,参与,0.95`
                 };
                 type = typeMap[entity.type] || entity.type || '未知';
             } else {
-                // 使用模拟数据
-                entity = {
-                    id: entityId,
-                    name: '示例实体',
-                    description: '这是一个示例实体描述，展示了实体的详细信息。',
-                    type: '模型'
-                };
-                type = '模型';
-                relations = [
-                    { relation: '使用', target: 'RAG系统', source: entityId },
-                    { relation: '优于', source: 'LLaMA-3-8B', target: entityId }
-                ];
+                entity = mockData.entities?.items?.find(item => item.id === entityId);
+
+                if (entity) {
+                    type = entity.type || '未知';
+                    relations = [
+                        { relation: '关联', target: entity.name, source: entityId }
+                    ];
+                } else {
+                    // 使用模拟数据
+                    entity = {
+                        id: entityId,
+                        name: '示例实体',
+                        description: '这是一个示例实体描述，展示了实体的详细信息。',
+                        type: '模型'
+                    };
+                    type = '模型';
+                    relations = [
+                        { relation: '使用', target: 'RAG系统', source: entityId },
+                        { relation: '优于', source: 'LLaMA-3-8B', target: entityId }
+                    ];
+                }
             }
 
             // 生成关系列表HTML
@@ -1781,7 +2334,7 @@ entity1,entity2,参与,0.95`
                 <div class="space-y-4">
                     <div>
                         <h4 class="font-semibold text-sm mb-2">描述</h4>
-                        <p class="text-sm text-gray-600">${entity.description || '暂无描述'}</p>
+                        <p class="text-sm text-gray-600">${entity.description || entity.desc || '暂无描述'}</p>
                     </div>
                     <div>
                         <h4 class="font-semibold text-sm mb-2">关联关系 (${relations.length})</h4>
@@ -1834,6 +2387,47 @@ entity1,entity2,参与,0.95`
             }, 100);
         }
 
+        function applyMonitorSummary() {
+            const summary = mockData.monitor?.summary || {};
+            const summaryFields = {
+                'monitor-nodes': summary.nodes,
+                'monitor-edges': summary.edges,
+                'monitor-memory': summary.memory,
+                'monitor-gpu': summary.gpu,
+                'monitor-queries': summary.queries,
+                'monitor-today': summary.today,
+                'monitor-latency': summary.latency,
+                'monitor-p95': summary.p95
+            };
+
+            Object.entries(summaryFields).forEach(([id, value]) => {
+                if (value === undefined) return;
+                const element = document.getElementById(id);
+                if (element) element.textContent = value;
+            });
+        }
+
+        function applyChatMockData() {
+            const welcome = mockData.chat?.welcome || {};
+            const chatIntroTitle = document.querySelector('#chat-box .font-semibold');
+            const chatInput = document.getElementById('user-input');
+
+            if (chatIntroTitle && welcome.title) {
+                chatIntroTitle.textContent = welcome.title;
+            }
+            if (chatInput && mockData.chat?.inputPlaceholder) {
+                chatInput.placeholder = mockData.chat.inputPlaceholder;
+            }
+        }
+
+        function applyDomBindings() {
+            domBindings.forEach(binding => {
+                const element = document.querySelector(binding.selector);
+                if (!element || !binding.property) return;
+                element[binding.property] = binding.value;
+            });
+        }
+
         // ==================== 初始化 ====================
         document.addEventListener('DOMContentLoaded', function() {
             // 设置默认展开的面板
@@ -1860,6 +2454,14 @@ entity1,entity2,参与,0.95`
 
             // 初始化分块配置显示
             updateChunkDisplay();
+
+            applyChatMockData();
+            applyMonitorSummary();
+            applyDomBindings();
+            renderDocuments();
+            renderEntities();
+            initLogs();
+            document.getElementById('system-log').dataset.initialized = 'true';
 
             // 为格式选择按钮添加样式修复
             document.querySelectorAll('.graph-format-btn').forEach(btn => {

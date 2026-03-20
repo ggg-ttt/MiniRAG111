@@ -1,0 +1,492 @@
+{
+  "mockData": {
+    "chat": {
+      "welcome": {
+        "title": "👋 你好！我是 SLM-GraphRAG 助手",
+        "description": "",
+        "footer": ""
+      },
+      "inputPlaceholder": "输入您的问题",
+      "mockResponse": {
+        "answerTemplate": "根据当前日志快照，系统围绕“{{query}}”对应的知识范围已经完成多轮文档处理与实体关系抽取。最新一轮图谱写入结果为 606 个节点、1225 条边，文档分块、实体向量与关系向量均已完成入库。这里展示的是基于真实日志整理后的模拟数据。",
+        "path": [
+          "日志定位",
+          "批次汇总",
+          "图谱统计",
+          "答案生成"
+        ],
+        "retrievalTimeRange": [
+          900,
+          1450
+        ],
+        "generationTimeRange": [
+          420,
+          780
+        ],
+        "tokenRange": [
+          900,
+          1500
+        ]
+      }
+    },
+    "monitor": {
+      "summary": {
+        "nodes": "606",
+        "edges": "1,225",
+        "memory": "6.8 GB",
+        "gpu": "3.2 GB"
+      },
+      "logs": [
+        {
+          "time": "2025-12-09 17:30:56,446",
+          "level": "info",
+          "msg": "Logger initialized for working directory: ./tests/Qwen3-4B-Instruct-2507_vllm"
+        },
+        {
+          "time": "2025-12-09 17:30:56,462",
+          "level": "info",
+          "msg": "已存储 2 个新的唯一文档，Number of batches to process: 1"
+        },
+        {
+          "time": "2025-12-09 17:31:31,603",
+          "level": "info",
+          "msg": "Writing graph with 42 nodes, 49 edges"
+        },
+        {
+          "time": "2025-12-09 17:32:16,982",
+          "level": "info",
+          "msg": "Writing graph with 98 nodes, 128 edges"
+        },
+        {
+          "time": "2025-12-09 17:33:21,379",
+          "level": "info",
+          "msg": "Writing graph with 217 nodes, 278 edges"
+        },
+        {
+          "time": "2025-12-09 17:34:30,862",
+          "level": "info",
+          "msg": "Writing graph with 268 nodes, 413 edges"
+        },
+        {
+          "time": "2025-12-09 17:35:32,351",
+          "level": "info",
+          "msg": "Writing graph with 307 nodes, 529 edges"
+        },
+        {
+          "time": "2025-12-09 17:36:38,314",
+          "level": "info",
+          "msg": "Writing graph with 358 nodes, 654 edges"
+        },
+        {
+          "time": "2025-12-09 17:37:44,904",
+          "level": "info",
+          "msg": "Writing graph with 392 nodes, 755 edges"
+        },
+        {
+          "time": "2025-12-09 17:38:55,491",
+          "level": "info",
+          "msg": "Writing graph with 453 nodes, 896 edges"
+        },
+        {
+          "time": "2025-12-09 17:40:12,636",
+          "level": "info",
+          "msg": "Writing graph with 500 nodes, 1003 edges"
+        },
+        {
+          "time": "2025-12-09 17:41:52,256",
+          "level": "info",
+          "msg": "Writing graph with 606 nodes, 1225 edges"
+        }
+      ]
+    },
+    "entities": {
+      "emptyState": {
+        "icon": "fas fa-mouse-pointer",
+        "text": "请从左侧选择一个实体查看详情"
+      },
+      "items": [
+        {
+          "id": "entity-SLM-RAG",
+          "name": "SLM-RAG",
+          "type": "系统",
+          "desc": "负责文档处理、向量写入、实体关系抽取和图谱落盘的主流程。",
+          "relations": 1225
+        },
+        {
+          "id": "entity-qwen3-4b-instruct-2507",
+          "name": "Qwen3-4B-Instruct-2507",
+          "type": "模型",
+          "desc": "本轮实验工作目录对应的核心模型实例。",
+          "relations": 606
+        },
+        {
+          "id": "entity-json-doc-status-storage",
+          "name": "json_doc_status_storage",
+          "type": "存储",
+          "desc": "文档状态 KV 存储，日志初始化时为空。",
+          "relations": 20
+        },
+        {
+          "id": "entity-llm-response-cache",
+          "name": "llm_response_cache",
+          "type": "存储",
+          "desc": "LLM 响应缓存 KV 存储，初始化时为空。",
+          "relations": 20
+        },
+        {
+          "id": "entity-text-chunks",
+          "name": "text_chunks",
+          "type": "索引",
+          "desc": "文档分块向量索引，10 轮累计写入 27 个 chunk vectors。",
+          "relations": 27
+        },
+        {
+          "id": "entity-entities",
+          "name": "entities",
+          "type": "索引",
+          "desc": "实体向量索引，最后一轮插入 295 个实体向量。",
+          "relations": 295
+        },
+        {
+          "id": "entity-entities-name",
+          "name": "entities_name",
+          "type": "索引",
+          "desc": "实体名称向量索引，最后一轮插入 295 个名称向量。",
+          "relations": 295
+        },
+        {
+          "id": "entity-relationships",
+          "name": "relationships",
+          "type": "索引",
+          "desc": "关系向量索引，最后一轮插入 451 个关系向量。",
+          "relations": 451
+        },
+        {
+          "id": "entity-graph-writer",
+          "name": "Graph Writer",
+          "type": "流程",
+          "desc": "负责将抽取后的实体关系写入图谱，最终写入 606 节点和 1225 边。",
+          "relations": 10
+        },
+        {
+          "id": "entity-document-pipeline",
+          "name": "Document Processing Pipeline",
+          "type": "流程",
+          "desc": "文档处理主链路，每轮完成后都会进入实体关系提取阶段。",
+          "relations": 10
+        }
+      ]
+    },
+    "documents": {
+      "items": [
+        {
+          "name": "batch-01-doc-a.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:30:56",
+          "status": "completed",
+          "entities": 42,
+          "relations": 49,
+          "chunks": 1
+        },
+        {
+          "name": "batch-01-doc-b.txt",
+          "size": "3 chunks",
+          "time": "2025-12-09 17:30:57",
+          "status": "completed",
+          "entities": 42,
+          "relations": 49,
+          "chunks": 3
+        },
+        {
+          "name": "batch-02-doc-a.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:31:31",
+          "status": "completed",
+          "entities": 87,
+          "relations": 104,
+          "chunks": 1
+        },
+        {
+          "name": "batch-02-doc-b.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:31:31",
+          "status": "completed",
+          "entities": 87,
+          "relations": 104,
+          "chunks": 2
+        },
+        {
+          "name": "batch-03-doc-a.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:32:16",
+          "status": "completed",
+          "entities": 175,
+          "relations": 219,
+          "chunks": 2
+        },
+        {
+          "name": "batch-03-doc-b.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:32:17",
+          "status": "completed",
+          "entities": 175,
+          "relations": 219,
+          "chunks": 2
+        },
+        {
+          "name": "batch-04-doc-a.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:33:21",
+          "status": "completed",
+          "entities": 179,
+          "relations": 240,
+          "chunks": 2
+        },
+        {
+          "name": "batch-04-doc-b.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:33:21",
+          "status": "completed",
+          "entities": 179,
+          "relations": 240,
+          "chunks": 1
+        },
+        {
+          "name": "batch-05-doc-a.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:34:30",
+          "status": "completed",
+          "entities": 177,
+          "relations": 242,
+          "chunks": 1
+        },
+        {
+          "name": "batch-05-doc-b.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:34:30",
+          "status": "completed",
+          "entities": 177,
+          "relations": 242,
+          "chunks": 1
+        },
+        {
+          "name": "batch-06-doc-a.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:35:32",
+          "status": "completed",
+          "entities": 204,
+          "relations": 300,
+          "chunks": 1
+        },
+        {
+          "name": "batch-06-doc-b.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:35:32",
+          "status": "completed",
+          "entities": 204,
+          "relations": 300,
+          "chunks": 1
+        },
+        {
+          "name": "batch-07-doc-a.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:36:38",
+          "status": "completed",
+          "entities": 206,
+          "relations": 280,
+          "chunks": 2
+        },
+        {
+          "name": "batch-07-doc-b.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:36:38",
+          "status": "completed",
+          "entities": 206,
+          "relations": 280,
+          "chunks": 1
+        },
+        {
+          "name": "batch-08-doc-a.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:37:45",
+          "status": "completed",
+          "entities": 235,
+          "relations": 348,
+          "chunks": 1
+        },
+        {
+          "name": "batch-08-doc-b.txt",
+          "size": "1 chunk",
+          "time": "2025-12-09 17:37:45",
+          "status": "completed",
+          "entities": 235,
+          "relations": 348,
+          "chunks": 1
+        },
+        {
+          "name": "batch-09-doc-a.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:38:55",
+          "status": "completed",
+          "entities": 273,
+          "relations": 360,
+          "chunks": 2
+        },
+        {
+          "name": "batch-09-doc-b.txt",
+          "size": "3 chunks",
+          "time": "2025-12-09 17:38:55",
+          "status": "completed",
+          "entities": 273,
+          "relations": 360,
+          "chunks": 3
+        },
+        {
+          "name": "batch-10-doc-a.txt",
+          "size": "2 chunks",
+          "time": "2025-12-09 17:40:12",
+          "status": "completed",
+          "entities": 295,
+          "relations": 451,
+          "chunks": 2
+        },
+        {
+          "name": "batch-10-doc-b.txt",
+          "size": "3 chunks",
+          "time": "2025-12-09 17:40:12",
+          "status": "completed",
+          "entities": 295,
+          "relations": 451,
+          "chunks": 3
+        }
+      ]
+    },
+    "graph": {
+      "elements": [
+        {
+          "data": {
+            "id": "SLM-RAG",
+            "label": "SLM-RAG",
+            "type": "技术"
+          }
+        },
+        {
+          "data": {
+            "id": "qwen",
+            "label": "Qwen3-4B-Instruct-2507",
+            "type": "模型"
+          }
+        },
+        {
+          "data": {
+            "id": "chunks",
+            "label": "text_chunks",
+            "type": "技术"
+          }
+        },
+        {
+          "data": {
+            "id": "entities",
+            "label": "entities",
+            "type": "技术"
+          }
+        },
+        {
+          "data": {
+            "id": "relations",
+            "label": "relationships",
+            "type": "技术"
+          }
+        },
+        {
+          "data": {
+            "id": "graph",
+            "label": "knowledge_graph",
+            "type": "技术"
+          }
+        },
+        {
+          "data": {
+            "source": "qwen",
+            "target": "SLM-RAG",
+            "weight": 0.95
+          }
+        },
+        {
+          "data": {
+            "source": "SLM-RAG",
+            "target": "chunks",
+            "weight": 0.82
+          }
+        },
+        {
+          "data": {
+            "source": "chunks",
+            "target": "entities",
+            "weight": 0.92
+          }
+        },
+        {
+          "data": {
+            "source": "entities",
+            "target": "relations",
+            "weight": 0.96
+          }
+        },
+        {
+          "data": {
+            "source": "relations",
+            "target": "graph",
+            "weight": 0.98
+          }
+        }
+      ]
+    },
+    "graphImport": {
+      "formats": {
+        "json": {
+          "title": "JSON 格式",
+          "description": "通用 JSON 图谱格式，包含节点和边数组。",
+          "example": "{\n  \"nodes\": [\n    {\"id\": \"entity1\", \"name\": \"实体1\", \"type\": \"人物\"}\n  ],\n  \"edges\": [\n    {\"source\": \"entity1\", \"target\": \"entity2\", \"relation\": \"关联\", \"weight\": 0.9}\n  ]\n}"
+        },
+        "graphml": {
+          "title": "GraphML 格式",
+          "description": "适合 Gephi、NetworkX 等工具导出的标准图格式。",
+          "example": "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<graphml>\n  <graph id=\"G\" edgedefault=\"directed\">\n    <node id=\"entity1\"/>\n    <edge source=\"entity1\" target=\"entity2\"/>\n  </graph>\n</graphml>"
+        },
+        "csv": {
+          "title": "CSV 格式",
+          "description": "适合以实体表和关系表两份文件导入。",
+          "example": "entities.csv:\nid,name,type\nentity1,张三,人物\n\nrelations.csv:\nsource,target,relation,weight\nentity1,entity2,参与,0.95"
+        }
+      }
+    }
+  },
+  "domBindings": [
+    {
+      "selector": "#token-count",
+      "property": "textContent",
+      "value": "0"
+    },
+    {
+      "selector": "#retrieval-time",
+      "property": "textContent",
+      "value": "0"
+    },
+    {
+      "selector": "#generation-time",
+      "property": "textContent",
+      "value": "0"
+    },
+    {
+      "selector": "#monitor-tab .rounded-xl.border.border-emerald-100.bg-emerald-50 .flex.items-center.justify-between.text-sm span:last-child",
+      "property": "textContent",
+      "value": "运行完成"
+    },
+    {
+      "selector": "#monitor-tab .rounded-xl.border.border-emerald-100.bg-emerald-50 p",
+      "property": "textContent",
+      "value": "本轮日志显示系统已连续完成 10 批次入库与图谱写入，最终达到 606 节点和 1225 条边。"
+    }
+  ]
+}
