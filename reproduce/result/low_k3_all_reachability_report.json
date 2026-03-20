@@ -1,0 +1,12 @@
+{
+  "k": 3,
+  "total_samples": 114,
+  "start_entity_extracted_count": 113,
+  "start_entity_mapped_count": 86,
+  "start_entity_mapped_rate": 0.7543859649122807,
+  "answer_mappable_count": 107,
+  "reachability_hit_count": 78,
+  "reachability_rate_over_answer_mappable": 0.7289719626168224,
+  "reachability_rate_over_total": 0.6842105263157895,
+  "output_csv": "reproduce/result/hybird_all_low_reachability_3hop_samples.csv"
+}

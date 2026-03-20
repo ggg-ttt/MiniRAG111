@@ -10,14 +10,7 @@ Pipeline per sample:
    within k hops from any matched start node.
 
 Usage:
-  python reproduce/eval_answer_reachability_3hop.py \
-    --qa-file reproduce/result/query_set_entity_answers_single.json \
-    --entities-file tests/qwen06b_old/vdb_entities_name.json \
-    --relations-file tests/qwen06b_old/vdb_relationships.json \
-    --k 3 \
-    --out-json reproduce/result/reachability_3hop_report.json \
-    --out-csv reproduce/result/reachability_3hop_samples.csv
-
+python reproduce/reachability.py --qa-file reproduce/result/query_set_entity_answers_single.json --entities-file tests/Qwen3-4B-Instruct-2507_vllm_debug/vdb_entities_name.json --relations-file tests/Qwen3-4B-Instruct-2507_vllm_debug/vdb_relationships.json --k 1 2 3 --out-json reproduce/result/all_reachability_khop_report.json --out-csv reproduce/result/all_reachability_khop_samples.csv --prompt-mode light
 Required env vars for LLM extraction (DashScope OpenAI-compatible API):
   DASHSCOPE_API_KEY
 Optional:
@@ -197,27 +190,31 @@ def parse_relationships_graph(path: Path) -> Dict[str, Set[str]]:
     return graph
 
 
-def bfs_within_k(graph: Dict[str, Set[str]], start_nodes: Iterable[str], k: int) -> Set[str]:
-    visited: Set[str] = set()
+def bfs_min_distance_within_k(
+    graph: Dict[str, Set[str]], start_nodes: Iterable[str], max_k: int
+) -> Dict[str, int]:
+    """Return minimum hop distance to each visited node up to max_k."""
+    min_dist: Dict[str, int] = {}
     dq: deque[Tuple[str, int]] = deque()
 
     for s in start_nodes:
-        if s in visited:
+        if s in min_dist:
             continue
-        visited.add(s)
+        min_dist[s] = 0
         dq.append((s, 0))
 
     while dq:
         node, dist = dq.popleft()
-        if dist == k:
+        if dist == max_k:
             continue
         for nb in graph.get(node, ()):  # Missing nodes are treated as isolated.
-            if nb in visited:
+            if nb in min_dist:
                 continue
-            visited.add(nb)
-            dq.append((nb, dist + 1))
+            next_dist = dist + 1
+            min_dist[nb] = next_dist
+            dq.append((nb, next_dist))
 
-    return visited
+    return min_dist
 
 
 def call_openai_compatible(
@@ -230,7 +227,7 @@ def call_openai_compatible(
 ) -> List[str]:
     """Return extracted start entities as a list of strings."""
 
-    if prompt_mode == "light":
+    if prompt_mode in {"light", "hybrid"}:
         system_prompt = system_prompt_light.format(query=question)
     else:
         system_prompt = system_prompt_mini.format(query=question)
@@ -264,12 +261,15 @@ def call_openai_compatible(
         parsed = json.loads(content)
     except json.JSONDecodeError as e:
         raise RuntimeError(f"Failed to parse LLM JSON response: {content[:500]}") from e
-    if prompt_mode == "light":
-        # For light prompt experiments, use both low/high level keywords as start nodes.
+    if prompt_mode in {"light", "hybrid"}:
+        # For light/hybrid prompt experiments, use low-level keywords or low+high keywords.
         low_level = parsed.get("low_level_keywords", [])
         high_level = parsed.get("high_level_keywords", [])
         if isinstance(low_level, list) and isinstance(high_level, list):
-            raw_entities = low_level + high_level
+            if prompt_mode == "hybrid":
+                raw_entities = low_level + high_level
+            else:
+                raw_entities = low_level
         elif isinstance(low_level, list):
             raw_entities = low_level
         elif isinstance(high_level, list):
@@ -310,12 +310,18 @@ def main() -> int:
     parser.add_argument("--qa-file", required=True, type=Path)
     parser.add_argument("--entities-file", required=True, type=Path)
     parser.add_argument("--relations-file", required=True, type=Path)
-    parser.add_argument("--k", type=int, default=3)
+    parser.add_argument(
+        "--k",
+        type=int,
+        nargs="+",
+        default=[3],
+        help="One or more hop values, e.g. --k 1 2 3",
+    )
     parser.add_argument("--out-json", required=True, type=Path)
     parser.add_argument("--out-csv", required=True, type=Path)
     parser.add_argument(
         "--prompt-mode",
-        choices=["mini", "light"],
+        choices=["mini", "light", "hybrid"],
         default="mini",
         help="Prompt template used for start-node extraction.",
     )
@@ -328,12 +334,28 @@ def main() -> int:
     )
     args = parser.parse_args()
 
+    k_values = []
+    for k in args.k:
+        if k < 0:
+            print("ERROR: --k must contain non-negative integers.", file=sys.stderr)
+            return 2
+        if k not in k_values:
+            k_values.append(k)
+    max_k = max(k_values) if k_values else 0
+
     # Use mode-specific prefixed output artifacts for this experiment variant.
-    out_prefix = "hybird_" if args.prompt_mode == "light" else "mini_"
+    if args.prompt_mode == "light":
+        mode_prefix = "low_"
+    elif args.prompt_mode == "hybrid":
+        mode_prefix = "hybrid_"
+    else:
+        mode_prefix = "mini_"
+    k_tag = "-".join(str(k) for k in k_values)
+    out_prefix = f"{mode_prefix}k{k_tag}_"
     args.out_json = ensure_prefixed_filename(args.out_json, out_prefix)
     args.out_csv = ensure_prefixed_filename(args.out_csv, out_prefix)
 
-    api_key = os.getenv("DASHSCOPE_API_KEY", "sk-9bd27b29acd84309a7983d183fc14cd0").strip()
+    api_key = "sk-27bca34541014e628299970d1a6323b5"
     base_url = os.getenv("DASHSCOPE_BASE_URL", "https://dashscope.aliyuncs.com/compatible-mode/v1").strip()
     model = os.getenv("DASHSCOPE_MODEL", "qwen3-1.7b").strip()
 
@@ -356,7 +378,7 @@ def main() -> int:
 
     total = 0
     answer_mappable = 0
-    answer_hit_k = 0
+    answer_hit_by_k: Dict[int, int] = {k: 0 for k in k_values}
     start_extracted = 0
     start_mapped = 0
 
@@ -396,27 +418,32 @@ def main() -> int:
         if answer_is_mappable:
             answer_mappable += 1
 
-        reachable = False
+        reachable_by_k: Dict[int, bool] = {k: False for k in k_values}
         if answer_is_mappable and start_in_entity_db:
-            nh = bfs_within_k(graph, matched_start_nodes, args.k)
-            reachable = len(nh.intersection(answer_candidates)) > 0
+            min_dist = bfs_min_distance_within_k(graph, matched_start_nodes, max_k)
+            min_answer_dist = min((min_dist.get(a) for a in answer_candidates), default=None)
+            if min_answer_dist is not None:
+                for k in k_values:
+                    reachable_by_k[k] = min_answer_dist <= k
 
-        if answer_is_mappable and reachable:
-            answer_hit_k += 1
+        if answer_is_mappable:
+            for k in k_values:
+                if reachable_by_k[k]:
+                    answer_hit_by_k[k] += 1
 
-        rows.append(
-            {
-                "sample_id": sid,
-                "question": question,
-                "answer": answer,
-                "llm_start_entities": json.dumps(start_entities, ensure_ascii=False),
-                "matched_start_nodes": json.dumps(sorted(matched_start_nodes), ensure_ascii=False),
-                "answer_candidates": json.dumps(sorted(answer_candidates), ensure_ascii=False),
-                "start_in_entity_db": int(start_in_entity_db),
-                "answer_mappable": int(answer_is_mappable),
-                f"reachable_at_{args.k}": int(reachable),
-            }
-        )
+        row = {
+            "sample_id": sid,
+            "question": question,
+            "answer": answer,
+            "llm_start_entities": json.dumps(start_entities, ensure_ascii=False),
+            "matched_start_nodes": json.dumps(sorted(matched_start_nodes), ensure_ascii=False),
+            "answer_candidates": json.dumps(sorted(answer_candidates), ensure_ascii=False),
+            "start_in_entity_db": int(start_in_entity_db),
+            "answer_mappable": int(answer_is_mappable),
+        }
+        for k in k_values:
+            row[f"reachable_at_{k}"] = int(reachable_by_k[k])
+        rows.append(row)
     args.out_csv.parent.mkdir(parents=True, exist_ok=True)
     with args.out_csv.open("w", encoding="utf-8", newline="") as f:
         fieldnames = [
@@ -428,24 +455,37 @@ def main() -> int:
             "answer_candidates",
             "start_in_entity_db",
             "answer_mappable",
-            f"reachable_at_{args.k}",
-        ]
+        ] + [f"reachable_at_{k}" for k in k_values]
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
+    per_k = {
+        str(k): {
+            "reachability_hit_count": answer_hit_by_k[k],
+            "reachability_rate_over_answer_mappable": (answer_hit_by_k[k] / answer_mappable) if answer_mappable else 0.0,
+            "reachability_rate_over_total": (answer_hit_by_k[k] / total) if total else 0.0,
+        }
+        for k in k_values
+    }
+
     report = {
-        "k": args.k,
+        "k_values": k_values,
         "total_samples": total,
         "start_entity_extracted_count": start_extracted,
         "start_entity_mapped_count": start_mapped,
         "start_entity_mapped_rate": (start_mapped / total) if total else 0.0,
         "answer_mappable_count": answer_mappable,
-        "reachability_hit_count": answer_hit_k,
-        "reachability_rate_over_answer_mappable": (answer_hit_k / answer_mappable) if answer_mappable else 0.0,
-        "reachability_rate_over_total": (answer_hit_k / total) if total else 0.0,
+        "per_k": per_k,
         "output_csv": str(args.out_csv),
     }
+
+    if len(k_values) == 1:
+        only_k = k_values[0]
+        report["k"] = only_k
+        report["reachability_hit_count"] = answer_hit_by_k[only_k]
+        report["reachability_rate_over_answer_mappable"] = per_k[str(only_k)]["reachability_rate_over_answer_mappable"]
+        report["reachability_rate_over_total"] = per_k[str(only_k)]["reachability_rate_over_total"]
 
     args.out_json.parent.mkdir(parents=True, exist_ok=True)
     with args.out_json.open("w", encoding="utf-8") as f:

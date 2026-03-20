@@ -37,7 +37,7 @@ CSV 只负责数值，不负责单条曲线样式。
 ## 2. 运行方式
 
 ```bash
-python reproduce/radar_plot.py reproduce/radar_plot_example.json -o reproduce/result/radar_example.png
+python reproduce/plot/radar_plot.py reproduce/plot/radar_plot_example.json -o reproduce/result/radar_final.png
 ```
 
 如果你的环境里命令不是 `python`，改成你自己的 Python 可执行文件即可。

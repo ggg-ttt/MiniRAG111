@@ -1,0 +1,76 @@
+{
+  "categories": [
+    "1-hop",
+    "2-hop",
+    "3-hop",
+    "5-hop",
+    "AEC"
+  ],
+  "style": {
+    "r_max": 1.0,
+    "r_ticks": [
+      0.2,
+      0.4,
+      0.6,
+      0.8,
+      1.0
+    ],
+    "legend_loc": "lower right",
+    "legend_bbox": [
+      1.1,
+      0.1
+    ],
+    "figure_size": [
+      6.4,
+      5.8
+    ],
+    "font_size": 12,
+    "fill_alpha": 0.1,
+    "line_width": 1.8
+  },
+  "series": [
+    {
+      "name": "MiniRAG",
+      "values": [
+        0.729,
+        0.7477,
+        0.7477,
+        0.7477,
+        0.9390
+      ],
+      "color": "#e74c3c",
+      "linestyle": "-",
+      "fill": true,
+      "fill_alpha": 0.08
+    },
+    {
+      "name": "LightRAG",
+      "values": [
+        0.4579,
+        0.7196,
+        0.7664,
+        0.7664,
+        0.9390
+      ],
+      "color": "#60a5fa",
+      "linestyle": "-",
+      "fill": true,
+      "fill_alpha": 0.08
+    },
+    {
+      "name": "VF-GIM",
+      "values": [
+        0.9439,
+        0.9907,
+        0.9907,
+        0.9907,
+        1.0000
+      ],
+      "color": "#57c76f",
+      "linestyle": "-",
+      "fill": true,
+      "fill_alpha": 0.12,
+      "linewidth": 1.8
+    }
+  ]
+}

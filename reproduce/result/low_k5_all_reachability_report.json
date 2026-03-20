@@ -1,0 +1,12 @@
+{
+  "k": 5,
+  "total_samples": 114,
+  "start_entity_extracted_count": 114,
+  "start_entity_mapped_count": 91,
+  "start_entity_mapped_rate": 0.7982456140350878,
+  "answer_mappable_count": 107,
+  "reachability_hit_count": 84,
+  "reachability_rate_over_answer_mappable": 0.7850467289719626,
+  "reachability_rate_over_total": 0.7368421052631579,
+  "output_csv": "reproduce/result/low_k5_all_reachability_samples.csv"
+}
