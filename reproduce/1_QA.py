@@ -89,7 +89,7 @@ elif args.model == "dpsk":
 elif args.model == "MiniCPM":
     LLM_MODEL = "openbmb/MiniCPM3-4B"
 elif args.model == "qwen":
-    LLM_MODEL = "Qwen/Qwen3-4B-Instruct-2507"
+    LLM_MODEL = "qwen3-1.7b"
 else:
     print("Invalid model name")
     raise SystemExit(1)
