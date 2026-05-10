@@ -24,7 +24,7 @@ DEFAULT_STYLE = {
     "spine_color": "#222222",
     "spine_width": 0.8,
     "font_size": 12,
-    "label_size": 13,
+    "label_size": 16,
     "tick_label_size": 10,
     "tick_padding": 2,
     "tick_format": "decimal",
