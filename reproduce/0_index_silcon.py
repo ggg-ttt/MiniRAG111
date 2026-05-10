@@ -30,8 +30,8 @@ from typing import Optional
 EMBEDDING_MODEL = "sentence-transformers/all-MiniLM-L6-v2"
 
 # OpenAI API 配置
-OPENAI_API_BASE = "https://dashscope.aliyuncs.com/compatible-mode/v1"
-OPENAI_API_KEY = "sk-b7b218ecfb5a49d1bcebfed82c7699b8"
+OPENAI_API_BASE = "https://api.siliconflow.cn/v1"
+OPENAI_API_KEY = "sk-djvusuabgezfmzvnirmdxxunefrxsuxvqapibmfjyebsijcu"
 if not OPENAI_API_KEY:
     raise EnvironmentError(
         "未检测到 API Key，请先设置 DASHSCOPE_API_KEY（或 OPENAI_API_KEY）。"
@@ -51,8 +51,8 @@ class TokenBucketLimiter:
     同时控制 RPM (Requests Per Minute) 和 TPM (Tokens Per Minute)
     """
 
-    rpm: int = 600  # 每分钟最大请求数
-    tpm: int = 1_000_000  # 每分钟最大token数
+    rpm: int = 1000  # 每分钟最大请求数
+    tpm: int = 80_000  # 每分钟最大token数
 
     # 内部状态
     _req_tokens: float = field(default=0, repr=False)
@@ -96,7 +96,7 @@ class TokenBucketLimiter:
 
 
 # 全局速率限制器实例 (600 RPM, 1,000,000 TPM)
-rate_limiter = TokenBucketLimiter(rpm=600, tpm=1_000_000)
+rate_limiter = TokenBucketLimiter(rpm=1000, tpm=80_000)
 
 
 async def openai_server_complete(
@@ -250,8 +250,8 @@ def get_args():
     parser.add_argument("--max_workers", type=int, default=4, help="文件读取并发数 (默认: 4)")
     parser.add_argument("--batch_size", type=int, default=4, help="每批文档数 (默认: 8)")
     parser.add_argument("--llm_max_async", type=int, default=10, help="LLM最大并发数 (默认: 10)")
-    parser.add_argument("--rpm", type=int, default=600, help="API RPM限制 (默认: 600)")
-    parser.add_argument("--tpm", type=int, default=1000000, help="API TPM限制 (默认: 1000000)")
+    parser.add_argument("--rpm", type=int, default=1000, help="API RPM限制 (默认: 600)")
+    parser.add_argument("--tpm", type=int, default=80000, help="API TPM限制 (默认: 1000000)")
     parser.add_argument("--api_timeout", type=float, default=600.0, help="单次API请求超时秒数 (默认: 300)")
     parser.add_argument("--api_max_retries", type=int, default=5, help="可重试错误的最大重试次数 (默认: 5)")
     parser.add_argument("--api_retry_base_wait", type=int, default=5, help="重试基础等待秒数，按 attempt 线性递增 (默认: 5)")
@@ -272,7 +272,7 @@ elif args.model == "dpsk":
 elif args.model == "glm":
     LLM_MODEL = "glm-4.5-air"
 elif args.model == "qwen":
-    LLM_MODEL = "qwen3-1.7b"
+    LLM_MODEL = "Pro/Qwen/Qwen2.5-7B-Instruct"
 else:
     print("Invalid model name")
     exit(1)
@@ -331,7 +331,7 @@ rag = MiniRAG(
     llm_model_name=LLM_MODEL,
     llm_model_max_async=args.llm_max_async,  # LLM最大并发数
     llm_model_kwargs={
-        "extra_body": {"enable_thinking": False},  # 非流式调用必须显式禁用
+        # "extra_body": {"enable_thinking": False},  # 非流式调用必须显式禁用
     },
     embedding_batch_num=32,  # 增大embedding批次
     embedding_func_max_async=16,  # embedding并发
